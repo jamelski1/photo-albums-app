@@ -211,7 +211,7 @@ extraction.
 \section{Implementation and Code Analysis}
 The code is five Python modules: \texttt{app.py} (routes, jobs,
 and page templates, 668 non-comment lines), \texttt{pipeline.py}
-(statistics, embeddings, clustering, covers, video, 228 lines),
+(statistics, embeddings, clustering, covers, video, 230 lines),
 \texttt{music.py} (synthesis and the fallback rule, 145 lines),
 \texttt{jamendo.py} (catalog search, scoring, download, 102
 lines), and \texttt{beats.py} (beat analysis and timing, 116
@@ -236,7 +236,7 @@ photo-albums-app/
                     (240 seed photos)
 +-- requirements.txt
 +-- render.yaml     Render deployment
-+-- tests/          31 unit tests
++-- tests/          33 unit tests
 +-- docs/           CLOC and Lizard outputs
 +-- jobs/           one folder per upload
                     (created at runtime)
@@ -252,7 +252,7 @@ photo-albums-app/
 \toprule
 Language & Files & Blank & Comment & Code \\
 \midrule
-Python & 11 & 257 & 611 & 1057 \\
+Python & 11 & 268 & 615 & 1084 \\
 \bottomrule
 \end{tabular}
 \label{tab:cloc}
@@ -267,11 +267,11 @@ Python & 11 & 257 & 611 & 1057 \\
 File & NLOC & Functions & Avg NLOC & Avg CCN \\
 \midrule
 app.py & 668 & 16 & 8.8 & 2.8 \\
-pipeline.py & 228 & 9 & 24.2 & 5.2 \\
+pipeline.py & 230 & 10 & 22.0 & 4.8 \\
 music.py & 145 & 9 & 11.6 & 2.8 \\
 jamendo.py & 102 & 8 & 11.4 & 4.8 \\
 beats.py & 116 & 8 & 13.8 & 3.9 \\
-\textbf{Total} & \textbf{1259} & \textbf{50} & \textbf{13.3} & \textbf{3.7} \\
+\textbf{Total} & \textbf{1261} & \textbf{51} & \textbf{13.0} & \textbf{3.7} \\
 \bottomrule
 \end{tabular}
 \label{tab:lizard}
@@ -287,13 +287,14 @@ candidate, recorded in the project's analysis notes. Most of
 \texttt{app.py}'s line count is its embedded page templates.
 
 \section{Evaluation}
-Thirty-one unit tests cover the music profiles and synthesis, the
+Thirty-three unit tests cover the music profiles and synthesis, the
 selection rule and its tie-breaks, the visual statistics, recovery
 of a known group count from synthetic embeddings, the web routes,
 the catalog module and its fallbacks, and the beat module (tempo
 and beat recovery on synthetic tracks, no beat for silence, and
-the timing planner's rules). All thirty-one pass in about eleven
-seconds.
+the timing planner's rules, and two regression tests that
+portrait photos keep their orientation. All thirty-three pass in
+about ten seconds.
 
 The full assignment run, executed in the notebook, used the fixed
 dataset of 240 photographs: 30 each from eight topics (mountains,

@@ -17,7 +17,15 @@ from collections import Counter
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
+
+
+def load_rgb(path):
+    """Open a photo as RGB with its EXIF orientation applied. Phone
+    photos store portrait shots as landscape pixels plus an
+    orientation tag; PIL ignores the tag, so without this step a
+    portrait comes out sideways everywhere downstream."""
+    return ImageOps.exif_transpose(Image.open(path)).convert("RGB")
 
 import jamendo
 import music
@@ -28,7 +36,7 @@ _preprocess = None
 
 
 def visual_stats(path):
-    img = Image.open(path).convert("RGB")
+    img = load_rgb(path)
     small = img.resize((128, 128))
     arr = np.asarray(small).astype(np.float32) / 255.0
     r, g, b = arr[..., 0], arr[..., 1], arr[..., 2]
@@ -79,7 +87,7 @@ def extract_embeddings(paths, progress=None):
     feats = []
     with torch.no_grad():
         for i in range(0, len(paths), BATCH):
-            batch = [preprocess(Image.open(p).convert("RGB")) for p in paths[i : i + BATCH]]
+            batch = [preprocess(load_rgb(p)) for p in paths[i : i + BATCH]]
             feats.append(model(torch.stack(batch)).numpy())
             if progress:
                 progress(f"Reading photo features: {min(i + BATCH, len(paths))} of {len(paths)}")
@@ -110,7 +118,7 @@ def choose_k(X):
 def build_montage(paths, out_path):
     thumbs = []
     for p in paths:
-        t = Image.open(p).convert("RGB")
+        t = load_rgb(p)
         t.thumbnail((320, 320))
         thumbs.append(t)
     cols = 4

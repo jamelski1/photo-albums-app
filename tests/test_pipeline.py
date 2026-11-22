@@ -61,6 +61,18 @@ def test_choose_k_respects_small_inputs():
     assert len(km.labels_) == 16
 
 
+def test_load_rgb_applies_exif_orientation(tmp_path):
+    from PIL import Image
+
+    p = tmp_path / "portrait.jpg"
+    img = Image.new("RGB", (120, 80), (200, 30, 30))
+    exif = img.getexif()
+    exif[274] = 6  # stored landscape, meant to be shown rotated: portrait
+    img.save(p, exif=exif)
+    loaded = pipeline.load_rgb(p)
+    assert loaded.size == (80, 120)
+
+
 def test_build_montage_dimensions(tmp_path):
     paths = [_save_solid(tmp_path, f"p{i}.jpg", (i * 20 % 255, 80, 160)) for i in range(12)]
     out = tmp_path / "montage.jpg"

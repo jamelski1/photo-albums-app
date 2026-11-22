@@ -1,59 +1,50 @@
-============================= test session starts =============================
-platform win32 -- Python 3.11.9, pytest-9.0.3, pluggy-1.6.0 -- C:\Users\lawso\AppData\Local\Programs\Python\Python311\python.exe
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- /home/hatch/workspace/photo-albums-app/venv/bin/python
 cachedir: .pytest_cache
-rootdir: D:\vibe-agent
-configfile: pyproject.toml
-plugins: anyio-4.12.0, langsmith-0.4.58, platformdirs-4.14.5
-collecting ... collected 40 items
+rootdir: /home/hatch/workspace/photo-albums-app
+collecting ... collected 33 items
 
-tests\test_app.py::test_home_page_loads PASSED                           [  2%]
-tests\test_app.py::test_upload_rejects_too_few_photos PASSED             [  5%]
-tests\test_app.py::test_upload_rejects_empty_submission PASSED           [  7%]
-tests\test_app.py::test_example_route_starts_a_job PASSED                [ 10%]
-tests\test_app.py::test_fetch_example_photos PASSED                      [ 12%]
-tests\test_app.py::test_original_url_derivation PASSED                   [ 15%]
-tests\test_app.py::test_unknown_job_is_404 PASSED                        [ 17%]
-tests\test_app.py::test_upload_error_is_json_for_the_page_uploader PASSED [ 20%]
-tests\test_app.py::test_not_found_renders_a_page PASSED                  [ 22%]
-tests\test_app.py::test_job_page_lists_every_pipeline_stage PASSED       [ 25%]
-tests\test_app.py::test_results_page_renders_a_finished_job[False] PASSED [ 27%]
-tests\test_app.py::test_results_page_renders_a_finished_job[True] PASSED [ 30%]
-tests\test_app.py::test_results_redirects_to_job_page_until_finished PASSED [ 32%]
-tests\test_app.py::test_home_and_job_pages_carry_the_backdrop_with_credit PASSED [ 35%]
-tests\test_app.py::test_backdrop_files_exist_for_every_credit PASSED     [ 37%]
-tests\test_app.py::test_results_page_stays_plain PASSED                  [ 40%]
-tests\test_beats.py::test_click_track_tempo_and_phase PASSED             [ 42%]
-tests\test_beats.py::test_click_track_slower_tempo PASSED                [ 45%]
-tests\test_beats.py::test_kick_hat_tempo PASSED                          [ 47%]
-tests\test_beats.py::test_silence_has_no_beats PASSED                    [ 50%]
-tests\test_beats.py::test_plan_segments_boundaries_on_grid PASSED        [ 52%]
-tests\test_jamendo.py::test_speed_buckets PASSED                         [ 55%]
-tests\test_jamendo.py::test_query_mapping_bright_fast_warm PASSED        [ 57%]
-tests\test_jamendo.py::test_query_mapping_dark_slow_cool PASSED          [ 60%]
-tests\test_jamendo.py::test_pick_prefers_speed_and_tag_match_and_is_deterministic PASSED [ 62%]
-tests\test_jamendo.py::test_pick_none_without_client_id PASSED           [ 65%]
-tests\test_jamendo.py::test_pick_none_on_api_failure_and_empty_results PASSED [ 67%]
-tests\test_jamendo.py::test_download_size_check PASSED                   [ 70%]
-tests\test_music.py::test_track_profiles_have_expected_mode_and_tempo_order PASSED [ 72%]
-tests\test_music.py::test_synth_track_is_finite_normalized_and_long_enough PASSED [ 75%]
-tests\test_music.py::test_ensure_tracks_writes_four_readable_wavs PASSED [ 77%]
-tests\test_music.py::test_choose_track_is_deterministic PASSED           [ 80%]
-tests\test_music.py::test_choose_track_scores_all_tracks_and_dark_cluster_prefers_dramatic PASSED [ 82%]
-tests\test_music.py::test_norm_helper PASSED                             [ 85%]
-tests\test_pipeline.py::test_visual_stats_white_is_bright_and_unsaturated PASSED [ 87%]
-tests\test_pipeline.py::test_visual_stats_red_is_warm_and_blue_is_cool PASSED [ 90%]
-tests\test_pipeline.py::test_visual_stats_checkerboard_has_more_edges_than_solid PASSED [ 92%]
-tests\test_pipeline.py::test_choose_k_recovers_three_blobs PASSED        [ 95%]
-tests\test_pipeline.py::test_choose_k_respects_small_inputs PASSED       [ 97%]
-tests\test_pipeline.py::test_build_montage_dimensions PASSED             [100%]
+tests/test_app.py::test_home_page_loads PASSED                           [  3%]
+tests/test_app.py::test_upload_rejects_too_few_photos PASSED             [  6%]
+tests/test_app.py::test_upload_rejects_empty_submission PASSED           [  9%]
+tests/test_app.py::test_example_route_starts_a_job PASSED                [ 12%]
+tests/test_app.py::test_fetch_example_photos PASSED                      [ 15%]
+tests/test_app.py::test_save_photos_keeps_portrait_orientation PASSED    [ 18%]
+tests/test_app.py::test_original_url_derivation PASSED                   [ 21%]
+tests/test_app.py::test_unknown_job_is_404 PASSED                        [ 24%]
+tests/test_beats.py::test_click_track_tempo_and_phase PASSED             [ 27%]
+tests/test_beats.py::test_click_track_slower_tempo PASSED                [ 30%]
+tests/test_beats.py::test_kick_hat_tempo PASSED                          [ 33%]
+tests/test_beats.py::test_silence_has_no_beats PASSED                    [ 36%]
+tests/test_beats.py::test_plan_segments_boundaries_on_grid PASSED        [ 39%]
+tests/test_jamendo.py::test_speed_buckets PASSED                         [ 42%]
+tests/test_jamendo.py::test_query_mapping_bright_fast_warm PASSED        [ 45%]
+tests/test_jamendo.py::test_query_mapping_dark_slow_cool PASSED          [ 48%]
+tests/test_jamendo.py::test_pick_prefers_speed_and_tag_match_and_is_deterministic PASSED [ 51%]
+tests/test_jamendo.py::test_pick_none_without_client_id PASSED           [ 54%]
+tests/test_jamendo.py::test_pick_none_on_api_failure_and_empty_results PASSED [ 57%]
+tests/test_jamendo.py::test_download_size_check PASSED                   [ 60%]
+tests/test_music.py::test_track_profiles_have_expected_mode_and_tempo_order PASSED [ 63%]
+tests/test_music.py::test_synth_track_is_finite_normalized_and_long_enough PASSED [ 66%]
+tests/test_music.py::test_ensure_tracks_writes_four_readable_wavs PASSED [ 69%]
+tests/test_music.py::test_choose_track_is_deterministic PASSED           [ 72%]
+tests/test_music.py::test_choose_track_scores_all_tracks_and_dark_cluster_prefers_dramatic PASSED [ 75%]
+tests/test_music.py::test_norm_helper PASSED                             [ 78%]
+tests/test_pipeline.py::test_visual_stats_white_is_bright_and_unsaturated PASSED [ 81%]
+tests/test_pipeline.py::test_visual_stats_red_is_warm_and_blue_is_cool PASSED [ 84%]
+tests/test_pipeline.py::test_visual_stats_checkerboard_has_more_edges_than_solid PASSED [ 87%]
+tests/test_pipeline.py::test_choose_k_recovers_three_blobs PASSED        [ 90%]
+tests/test_pipeline.py::test_choose_k_respects_small_inputs PASSED       [ 93%]
+tests/test_pipeline.py::test_load_rgb_applies_exif_orientation PASSED    [ 96%]
+tests/test_pipeline.py::test_build_montage_dimensions PASSED             [100%]
 
-============================== warnings summary ===============================
-photo-albums-app/tests/test_pipeline.py::test_visual_stats_white_is_bright_and_unsaturated
-photo-albums-app/tests/test_pipeline.py::test_visual_stats_red_is_warm_and_blue_is_cool
-photo-albums-app/tests/test_pipeline.py::test_visual_stats_red_is_warm_and_blue_is_cool
-photo-albums-app/tests/test_pipeline.py::test_visual_stats_checkerboard_has_more_edges_than_solid
-  C:\Users\lawso\AppData\Local\Programs\Python\Python311\Lib\site-packages\sklearn\base.py:1336: ConvergenceWarning: Number of distinct clusters (1) found smaller than n_clusters (3). Possibly due to duplicate points in X.
+=============================== warnings summary ===============================
+tests/test_pipeline.py::test_visual_stats_white_is_bright_and_unsaturated
+tests/test_pipeline.py::test_visual_stats_red_is_warm_and_blue_is_cool
+tests/test_pipeline.py::test_visual_stats_red_is_warm_and_blue_is_cool
+tests/test_pipeline.py::test_visual_stats_checkerboard_has_more_edges_than_solid
+  /home/hatch/workspace/photo-albums-app/venv/lib/python3.12/site-packages/sklearn/base.py:1403: ConvergenceWarning: Number of distinct clusters (1) found smaller than n_clusters (3). Possibly due to duplicate points in X.
     return fit_method(estimator, *args, **kwargs)
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-======================= 40 passed, 4 warnings in 8.14s ========================
+======================== 33 passed, 4 warnings in 5.38s ========================
