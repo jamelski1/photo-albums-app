@@ -56,6 +56,10 @@ On a smaller plan the feature step runs out of memory.
 ## Layout
 
 - `app.py` — Flask app: upload, background job, status polling, results.
+  The three pages (drag-and-drop uploader with previews and upload
+  progress, a staged progress page, and the results page with covers,
+  statistics, music attribution and videos) are inline templates in this
+  file, so there is no templates directory and no front-end build.
 - `pipeline.py` — statistics, embeddings, clustering, covers, videos.
 - `music.py` — procedural track synthesis and the selection rule, carried
   over from the assignment system.

@@ -11,10 +11,18 @@ this folder.
 |---|---|---|---|---|
 | Python | 9 | 178 | 149 | 724 |
 
+The CLOC table was measured before the interface refresh of `app.py`,
+which added about 432 lines, nearly all of them the inline HTML,
+CSS and JavaScript of the three pages (the app keeps its templates in the
+module on purpose: one file, no build step).
+
 ## Lizard (cyclomatic complexity)
 
-The four application modules total 605 non-comment lines across 34
-functions, with an average cyclomatic complexity of 3.8.
+The four application modules total 1042 non-comment lines across 38
+functions, with an average cyclomatic complexity of 3.5. Lizard counts
+the lines of the page templates in `app.py` as code, which is where most
+of the total comes from; the twelve functions in `app.py` average a
+complexity of 2.2 and none exceeds 4.
 
 One warning: `run_pipeline` in `pipeline.py` has a cyclomatic complexity
 of 21 (threshold 15) at 81 NLOC. It is the orchestration function that
@@ -27,7 +35,9 @@ is the first refactoring candidate.
 
 ## Tests
 
-23 unit tests, all passing (pytest 9.2.0, about 6 seconds). Coverage by
+29 unit tests, all passing (pytest 9.0.3, about 7 seconds). Coverage by
 area: music synthesis and the selection rule (6), visual statistics,
-k selection, and montage geometry (6), the Flask routes (4), and the
-Jamendo query mapping, candidate scoring, and fallbacks (7).
+k selection, and montage geometry (6), the Flask routes (10: the home,
+job, results and error pages, upload validation as a page and as JSON,
+and the redirect from results to the job page), and the Jamendo query
+mapping, candidate scoring, and fallbacks (7).
