@@ -37,6 +37,24 @@ STAGES = [
     ("Building", "Building a slideshow video for each collection"),
 ]
 
+# Backdrop photographs for the home and progress pages: Ansel Adams'
+# National Park Service series (1933-1942), U.S. National Archives, public
+# domain, via Wikimedia Commons. Files live in static/backdrop/.
+_COMMONS = "https://commons.wikimedia.org/wiki/File:"
+BACKDROP = [
+    {"file": "tetons.jpg", "title": "The Tetons and the Snake River",
+     "page": _COMMONS + "Adams_The_Tetons_and_the_Snake_River.jpg"},
+    {"file": "mcdonald-lake.jpg", "title": "Evening, McDonald Lake, Glacier National Park",
+     "page": _COMMONS + "Ansel_Adams_-_National_Archives_79-AA-E06.jpg"},
+    {"file": "canyon-de-chelly.jpg", "title": "Canyon de Chelly",
+     "page": _COMMONS + "Ansel_Adams_-_National_Archives_79-AA-C02.jpg"},
+    {"file": "half-dome.jpg", "title": "Half Dome, Apple Orchard, Yosemite",
+     "page": _COMMONS + "Ansel_Adams_-_National_Archives_79-AA-U01.jpg"},
+    {"file": "death-valley.jpg", "title": "Death Valley",
+     "page": _COMMONS + "Ansel_Adams_-_National_Archives_79-AA-D01.jpg"},
+]
+SLIDE_SECONDS = 11  # each backdrop photo gets this long before the next fades in
+
 # ---------------------------------------------------------------- templates
 # The whole front end lives in this file on purpose: one module, no
 # templates directory, no build step. Pages share BASE_HTML.
@@ -49,6 +67,7 @@ BASE_HTML = """<!doctype html>
 <meta name="color-scheme" content="light dark">
 <title>{% block title %}Automatic Photo Albums{% endblock %}</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f766e'/%3E%3Crect x='6' y='9' width='20' height='15' rx='2' fill='none' stroke='%23fff' stroke-width='2'/%3E%3Ccircle cx='12' cy='14' r='2' fill='%23fff'/%3E%3Cpath d='M8 22l5-5 4 4 3-3 4 4' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E">
+{% if backdrop %}<link rel="preload" as="image" href="{{ url_for('static', filename='backdrop/' ~ backdrop_photos[0].file) }}">{% endif %}
 <style>
 :root{--bg:#f6f4ef;--card:#fff;--ink:#1d1a16;--muted:#6b6459;--line:#e4dfd5;--soft:#e6f3f1;
   --accent:#0f766e;--accent-ink:#fff;--accent-hi:#0b5e58;--danger:#b4232c;--danger-bg:#fdecec;
@@ -87,8 +106,24 @@ footer{max-width:62rem;margin:0 auto;padding:1rem;color:var(--muted);font-size:.
 .btn.ghost:hover{background:var(--soft)}
 .pill{display:inline-block;font-size:.8rem;font-weight:600;border-radius:999px;padding:.15rem .65rem;background:var(--soft);color:var(--accent-hi);vertical-align:middle}
 .error{background:var(--danger-bg);color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 35%,transparent);border-radius:10px;padding:.75rem 1rem}
+/* backdrop: slow crossfade with a gentle drift, behind the header and hero */
+.stage{position:relative;isolation:isolate}
+.stage.lit{color:#fff;background:#14171a}
+.stage.lit .top{border-bottom-color:rgba(255,255,255,.14)}
+.stage.lit .brand,.stage.lit .tag{color:#fff}
+.stage.lit .tag{border-color:rgba(255,255,255,.3)}
+.stage.lit .brand:hover{color:#9ee6dc}
+.backdrop{position:absolute;inset:0;z-index:-1;overflow:hidden;background:#14171a center/cover no-repeat}
+.slide{position:absolute;inset:-5%;background:center/cover no-repeat;opacity:0;animation:drift var(--len) ease-in-out infinite var(--delay);will-change:opacity,transform}
+@keyframes drift{0%{opacity:0;transform:scale(1) translate3d(0,0,0)}7%{opacity:1}29%{opacity:1}
+  36%{opacity:0;transform:scale(1.1) translate3d(-1.2%,.8%,0)}100%{opacity:0;transform:scale(1.1) translate3d(-1.2%,.8%,0)}}
+.veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,12,14,.55) 0%,rgba(10,12,14,.42) 68%,var(--bg) 100%)}
+.hero{max-width:62rem;margin:0 auto;padding:4.5rem 1rem 5.5rem}
+@media (min-width:900px){.hero{padding:6.5rem 1rem 8rem}}
+.stage.lit .hero h1{color:#fff;text-shadow:0 2px 24px rgba(0,0,0,.5)}
+.stage.lit .hero .lead{color:rgba(255,255,255,.88);text-shadow:0 1px 12px rgba(0,0,0,.5)}
+@media (prefers-reduced-motion:reduce){.slide{animation:none}.slide:first-child{opacity:1}}
 /* home */
-.hero{padding:2.5rem 0 1.5rem}
 .drop{position:relative;display:block;border:2px dashed color-mix(in srgb,var(--accent) 55%,var(--line));border-radius:var(--radius);
   padding:2.5rem 1.5rem;text-align:center;background:var(--card);transition:border-color .15s,background .15s;cursor:pointer}
 .drop:hover,.drop.over,.drop:focus-within{border-color:var(--accent);background:var(--soft)}
@@ -171,28 +206,52 @@ table.scores tr.win td{font-weight:700;color:var(--accent-hi)}
 </style>
 </head>
 <body>
+<div class="stage{% if backdrop %} lit{% endif %}">
+{% if backdrop %}
+<div class="backdrop" aria-hidden="true" style="background-image:url('{{ url_for('static', filename='backdrop/' ~ backdrop_photos[0].file) }}')">
+{% for p in backdrop_photos %}{% set src = url_for('static', filename='backdrop/' ~ p.file) %}
+  <div class="slide" style="--delay:{{ loop.index0 * slide_seconds }}s;--len:{{ backdrop_photos|length * slide_seconds }}s{% if loop.first %};background-image:url('{{ src }}'){% endif %}"{% if not loop.first %} data-src="{{ src }}"{% endif %}></div>
+{% endfor %}
+  <div class="veil"></div>
+</div>
+{% endif %}
 <header class="top">
   <a class="brand" href="{{ url_for('home') }}"><span class="logo" aria-hidden="true">&#9635;</span>Automatic Photo Albums</a>
   <span class="tag">SENG 691 &middot; Assignment 5</span>
 </header>
+{% block hero %}{% endblock %}
+</div>
 <main class="wrap">
 {% block body %}{% endblock %}
 </main>
 <footer>Photos are grouped with a pre-trained ResNet-50 and K-Means; music is matched by a fixed rule over each
-collection's colors and detail. Nothing is chosen by hand.</footer>
+collection's colors and detail. Nothing is chosen by hand.
+{% if backdrop %}<br>Backdrop: {% for p in backdrop_photos %}<a href="{{ p.page }}" rel="noopener">{{ p.title }}</a>{{ ", " if not loop.last }}{% endfor %},
+photographed by Ansel Adams for the National Park Service (1933 to 1942). U.S. National Archives, public domain, via Wikimedia Commons.{% endif %}</footer>
+{% if backdrop %}
+<script>
+addEventListener('load', function () {  // the other slides load after the page itself
+  document.querySelectorAll('.slide[data-src]').forEach(function (s) {
+    s.style.backgroundImage = "url('" + s.getAttribute('data-src') + "')";
+  });
+});
+</script>
+{% endif %}
 {% block scripts %}{% endblock %}
 </body>
 </html>
 """
 
 HOME = """{% extends "base.html" %}
-{% block body %}
+{% set backdrop = true %}
+{% block hero %}
 <section class="hero">
   <h1>Turn a pile of photos into albums.</h1>
   <p class="lead">Upload a set of photos. The system groups the ones that belong together, designs a cover for each
   collection, picks a music track to match its look, and renders a slideshow video you can download.</p>
 </section>
-
+{% endblock %}
+{% block body %}
 <form id="form" action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
   <label class="drop" id="drop" for="photos">
     <input id="photos" type="file" name="photos" accept="image/*{% if heic %},.heic,.heif{% endif %}" multiple required>
@@ -339,11 +398,16 @@ HOME = """{% extends "base.html" %}
 """
 
 JOB_PAGE = """{% extends "base.html" %}
+{% set backdrop = true %}
 {% block title %}Making your albums{% endblock %}
+{% block hero %}
+<section class="hero">
+  <h1>Making your albums</h1>
+  <p class="lead">This usually takes a minute or two, longer for big uploads. Keep this page open; it will move to
+  your albums when they are ready.</p>
+</section>
+{% endblock %}
 {% block body %}
-<h1>Making your albums</h1>
-<p class="lead">This usually takes a minute or two, longer for big uploads. Keep this page open; it will move to
-your albums when they are ready.</p>
 <ol class="stages" id="stages" aria-label="Pipeline stages">
 {% for key, name in stages %}
   <li data-key="{{ key }}"><span><span class="name">{{ name }}</span><span class="detail"></span></span></li>
@@ -530,10 +594,16 @@ ERROR_PAGE = """{% extends "base.html" %}
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 1200 * 1024 * 1024
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 7 * 24 * 3600  # backdrops and job files never change
 app.jinja_loader = DictLoader({
     "base.html": BASE_HTML, "home.html": HOME, "job.html": JOB_PAGE,
     "results.html": RESULTS, "error.html": ERROR_PAGE,
 })
+
+
+@app.context_processor
+def _backdrop_context():
+    return {"backdrop_photos": BACKDROP, "slide_seconds": SLIDE_SECONDS}
 
 
 def _page_error(message, status, title="That did not work"):
