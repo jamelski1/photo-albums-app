@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: photo-albums
+    env: python
+    # Standard (2 GB RAM): the ResNet-50 step needs more memory than the
+    # free and starter tiers give, and the service will run out of memory
+    # there. Change the plan in the Render dashboard if you accept that.
+    plan: standard
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 1 --threads 8 --timeout 900 --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8

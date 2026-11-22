@@ -1,0 +1,11 @@
+................                                                         [100%]
+=============================== warnings summary ===============================
+tests/test_pipeline.py::test_visual_stats_white_is_bright_and_unsaturated
+tests/test_pipeline.py::test_visual_stats_red_is_warm_and_blue_is_cool
+tests/test_pipeline.py::test_visual_stats_red_is_warm_and_blue_is_cool
+tests/test_pipeline.py::test_visual_stats_checkerboard_has_more_edges_than_solid
+  /home/hatch/workspace/photo-albums-app/venv/lib/python3.12/site-packages/sklearn/base.py:1403: ConvergenceWarning: Number of distinct clusters (1) found smaller than n_clusters (3). Possibly due to duplicate points in X.
+    return fit_method(estimator, *args, **kwargs)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+16 passed, 4 warnings in 5.39s
