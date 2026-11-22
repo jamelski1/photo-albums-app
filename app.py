@@ -22,7 +22,7 @@ BASE = Path(__file__).resolve().parent
 JOBS = BASE / "jobs"
 JOBS.mkdir(exist_ok=True)
 MIN_PHOTOS = 8
-MAX_PHOTOS = 60
+MAX_PHOTOS = 240
 
 JOBS_STATE = {}
 
@@ -211,6 +211,12 @@ HOME = """{% extends "base.html" %}
   <div id="progress" class="progress" hidden role="progressbar" aria-label="Upload progress"><div class="fill"></div></div>
   <p id="plabel" class="plabel" hidden></p>
   <p id="err" class="error" role="alert" hidden></p>
+</form>
+
+<form action="{{ url_for('example') }}" method="post">
+  <p class="muted">No photos handy?
+  <button class="btn" type="submit">Run the 240-photo example</button>
+  The built-in set from the full assignment run: mountains, beach, city and forest photos from Wikimedia Commons.</p>
 </form>
 
 <ol class="steps" aria-label="How it works">
@@ -523,7 +529,7 @@ ERROR_PAGE = """{% extends "base.html" %}
 """
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 400 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 1200 * 1024 * 1024
 app.jinja_loader = DictLoader({
     "base.html": BASE_HTML, "home.html": HOME, "job.html": JOB_PAGE,
     "results.html": RESULTS, "error.html": ERROR_PAGE,
@@ -563,6 +569,60 @@ def _run_job(job_id):
         JOBS_STATE[job_id] = {"state": "error", "step": str(exc)}
 
 
+EXAMPLE_MANIFEST = BASE / "data" / "example_manifest.csv"
+
+
+def _fetch_example_photos(images_dir, progress=None):
+    """Download the built-in example set, the 240 seed photos of the
+    full assignment run, hosted on Wikimedia Commons, into a job's
+    images folder. Returns how many photos were fetched."""
+    import csv
+    import urllib.request
+
+    with open(EXAMPLE_MANIFEST, newline="") as f:
+        rows = list(csv.DictReader(f))
+    saved = 0
+    for row in rows:
+        tmp = images_dir / f"raw_{saved:03d}.jpg"
+        for attempt in range(3):
+            try:
+                req = urllib.request.Request(
+                    row["image_url"],
+                    headers={"User-Agent": "photo-albums-example/1.0"})
+                raw = urllib.request.urlopen(req, timeout=60).read()
+                tmp.write_bytes(raw)
+                img = Image.open(tmp).convert("RGB")
+                img.save(images_dir / f"photo_{saved:03d}.jpg", quality=92)
+                tmp.unlink(missing_ok=True)
+                saved += 1
+                break
+            except Exception:
+                if attempt == 2:
+                    tmp.unlink(missing_ok=True)
+        if progress and saved and saved % 40 == 0:
+            progress(f"Fetching the example photos ({saved} of {len(rows)})")
+    return saved
+
+
+def _run_example_job(job_id):
+    job_dir = JOBS / job_id
+    try:
+        _set_step(job_id, "Fetching the example photos")
+        saved = _fetch_example_photos(
+            job_dir / "images", lambda s: _set_step(job_id, s))
+        if saved < MIN_PHOTOS:
+            JOBS_STATE[job_id] = {
+                "state": "error",
+                "step": "The example photos could not be fetched."}
+            return
+        import pipeline
+
+        pipeline.run_pipeline(job_dir, lambda s: _set_step(job_id, s))
+        JOBS_STATE[job_id] = {"state": "done", "step": "Done"}
+    except Exception as exc:  # surfaced on the job page
+        JOBS_STATE[job_id] = {"state": "error", "step": str(exc)}
+
+
 def _save_photos(files, images_dir):
     """Re-encode every readable upload as JPEG; return how many were kept."""
     saved = 0
@@ -596,6 +656,17 @@ def upload():
         return _page_error(f"Fewer than {MIN_PHOTOS} of those files could be read as photos.", 400)
     JOBS_STATE[job_id] = {"state": "working", "step": "Starting"}
     threading.Thread(target=_run_job, args=(job_id,), daemon=True).start()
+    return redirect(url_for("job_page", job_id=job_id))
+
+
+@app.route("/example", methods=["POST"])
+def example():
+    job_id = uuid.uuid4().hex[:12]
+    (JOBS / job_id / "images").mkdir(parents=True)
+    JOBS_STATE[job_id] = {"state": "working",
+                          "step": "Fetching the example photos"}
+    threading.Thread(target=_run_example_job, args=(job_id,),
+                     daemon=True).start()
     return redirect(url_for("job_page", job_id=job_id))
 
 

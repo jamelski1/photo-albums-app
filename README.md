@@ -34,7 +34,7 @@ python3 -m venv venv
 ./venv/bin/python app.py
 ```
 
-Open http://localhost:5000 and upload between 8 and 60 photos.
+Open http://localhost:5000 and upload between 8 and 240 photos, or run the built-in example over the 240-photo seed set from the assignment run.
 
 For real music instead of the synthesized fallback, register a free
 non-commercial app at https://devportal.jamendo.com and set the client
