@@ -45,4 +45,4 @@ tests/test_pipeline.py::test_visual_stats_checkerboard_has_more_edges_than_solid
     return fit_method(estimator, *args, **kwargs)
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-======================= 31 passed, 4 warnings in 10.64s ========================
+======================== 31 passed, 4 warnings in 9.45s ========================
