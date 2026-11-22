@@ -208,6 +208,15 @@ lives in the companion notebook. It runs on Render on a 2 GB
 instance, because smaller tiers run out of memory during feature
 extraction.
 
+One intake detail mattered in practice. Phone cameras store
+portrait photos as landscape pixels plus an orientation tag in the
+photo's EXIF data, and the imaging library ignores that tag when
+it re-saves a file. The first deployed version therefore turned
+portrait photos sideways in the covers and videos. Intake now
+applies the EXIF orientation before re-encoding, and the pipeline
+applies it again wherever a photo is opened, so a portrait stays
+portrait end to end; two regression tests cover the case.
+
 \section{Implementation and Code Analysis}
 The code is five Python modules: \texttt{app.py} (routes, jobs,
 and page templates, 668 non-comment lines), \texttt{pipeline.py}
