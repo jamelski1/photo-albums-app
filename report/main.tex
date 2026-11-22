@@ -23,17 +23,17 @@ jlawson2@umbc.edu}}
 \maketitle
 
 \begin{abstract}
-This paper presents a web service that turns a set of uploaded
-photographs into finished slideshow albums. Each photo is described
-by simple visual statistics and by an embedding, a list of numbers
-produced by a pre-trained ResNet-50 network that captures what the
-photo shows. K-Means clustering groups the photos, with the number
-of groups chosen by silhouette score. For each group the system
-builds a cover sheet and picks background music by a fixed rule: the
-group's statistics become a target profile, the profile becomes a
-mood-tag search over the Jamendo catalog of Creative Commons
+I present a web service that turns a set of uploaded photographs
+into finished slideshow albums. I describe each photo by simple
+visual statistics and by an embedding, a list of numbers produced
+by a pre-trained ResNet-50 network that captures what the photo
+shows. I group the photos with K-Means clustering, choosing the
+number of groups by silhouette score. For each group I build a
+cover sheet and pick background music by a fixed rule: I turn the
+group's statistics into a target profile, I turn the profile into
+a mood-tag search over the Jamendo catalog of Creative Commons
 tracks, and a deterministic scoring function picks one track, with
-tracks synthesized in code as a fallback. It then renders one
+tracks I synthesized in code as a fallback. I then render one
 slideshow video per group, timed so the photo changes land on the
 beat of the music.
 \end{abstract}
@@ -52,37 +52,38 @@ each album needs background music, how should the music be chosen
 so the choice follows a rule anyone can inspect, instead of one
 person's taste or a random draw?
 
-This system answers both. Similarity comes from ResNet-50
-embeddings \cite{he2016}: the network was trained on millions of
-images, so its embeddings capture shape and content without any
-training on the user's photos. Grouping is K-Means over those
-embeddings, with the group count picked by silhouette score
-\cite{rousseeuw1987}, a measure of how well separated the groups
-are. Music is chosen by a documented rule: a collection's measured
-brightness, saturation, warmth, and edge density become a target
-musical profile, and the profile drives a scored search over a
-catalog of Creative Commons tracks, with a small library of tracks
-synthesized in code as a fallback. In the terms of Poole and
-Mackworth \cite{poole2017}, the service is a simple computational
-agent: it perceives each upload through measured features and acts
-by producing albums, with every rule fixed in advance and open to
-inspection.
+I answer both questions with one system. I take similarity from
+ResNet-50 embeddings \cite{he2016}: the network was trained on
+millions of images, so its embeddings capture shape and content
+without any training on the user's photos. I group with K-Means
+over those embeddings, and I pick the group count by silhouette
+score \cite{rousseeuw1987}, a measure of how well separated the
+groups are. I choose music by a documented rule: I turn a
+collection's measured brightness, saturation, warmth, and edge
+density into a target musical profile, and I let the profile drive
+a scored search over a catalog of Creative Commons tracks, with a
+small library of tracks I synthesized in code as a fallback. In
+the terms of Poole and Mackworth \cite{poole2017}, I built the
+service as a simple computational agent: it perceives each upload
+through measured features and acts by producing albums, with every
+rule fixed in advance and open to inspection.
 
-The system began as a notebook assignment for a graduate course on
-AI agents and deep learning. On a fixed set of 240 licensed
-photographs from Wikimedia Commons it scored a cluster purity of
+I began this system as a notebook assignment for a graduate course
+on AI agents and deep learning. On a fixed set of 240 licensed
+photographs from Wikimedia Commons I scored a cluster purity of
 0.821 and a normalized mutual information of 0.739 against the
-photos' source topics; both scores say how closely the found groups
-match the known topics. This paper describes the same pipeline as a
-public web service, where a visitor uploads 8 to 240 photos and
-receives covers, music, and slideshow videos for every collection
-the system finds.
+photos' source topics; both scores say how closely the found
+groups match the known topics. In this paper I describe the same
+pipeline as a public web service, where a visitor uploads 8 to 240
+photos and receives covers, music, and slideshow videos for every
+collection the system finds.
 
 \section{System Design}
 
-Figure \ref{fig:pipeline} shows the pipeline end to end. Every stage
-follows fixed rules, and the numbers each stage produces are stored
-with the job, so every output can be explained afterwards.
+Figure \ref{fig:pipeline} shows the pipeline I built, end to end.
+I fixed every stage's rules in advance, and I store the numbers
+each stage produces with the job, so I can explain every output
+afterwards.
 
 \begin{figure*}[htbp]
 \begin{center}
@@ -109,81 +110,81 @@ with the job, so every output can be explained afterwards.
 \end{figure*}
 
 \subsection{Visual statistics}
-Each photo is shrunk to a $128 \times 128$ thumbnail, and four
-statistics are computed: brightness, saturation, warmth (red minus
-blue), and edge density (how much detail the photo has). A
-three-center K-Means over sampled pixels gives three dominant
-colors. These statistics are cheap to compute, easy to explain, and
-are exactly what the music rule uses.
+I shrink each photo to a $128 \times 128$ thumbnail, and I compute
+four statistics: brightness, saturation, warmth (red minus blue),
+and edge density (how much detail the photo has). A three-center
+K-Means over sampled pixels gives three dominant colors. These
+statistics are cheap to compute and easy to explain, and I use
+exactly these statistics in the music rule.
 
 \subsection{Feature extraction}
-Each photo is embedded with ResNet-50 pre-trained on ImageNet
-\cite{deng2009}, with the classification head removed so the
-2,048-number pooled feature is kept. Embeddings are normalized to
-unit length, which makes plain K-Means group by similarity of
-content. Pre-trained features are the right tool here because the
-service must handle any photos a visitor uploads, with no training
-set of its own.
+I embed each photo with ResNet-50 pre-trained on ImageNet
+\cite{deng2009}, with the classification head removed so I keep
+the 2,048-number pooled feature. I normalize embeddings to unit
+length, which makes plain K-Means group by similarity of content.
+Pre-trained features are the right choice here because I must
+handle any photos a visitor uploads, with no training set of my
+own.
 
 \subsection{Clustering}
-K-Means is tried for each candidate group count $k$ in a range set
-by the number of photos, and the $k$ with the best silhouette score
-is kept. For the original assignment dataset the groups could be
-scored against the photos' known topics; for a visitor's upload
-there is no ground truth, so the service reports the silhouette
-score it used and describes each collection by its size, its
-dominant colors, and its average statistics.
+I try K-Means for each candidate group count $k$ in a range set by
+the number of photos, and I keep the $k$ with the best silhouette
+score. For the original assignment dataset I could score the
+groups against the photos' known topics; for a visitor's upload I
+have no ground truth, so I report the silhouette score I used and
+describe each collection by its size, its dominant colors, and its
+average statistics.
 
 \subsection{Music sources and the selection rule}
-Each collection's statistics are scaled across the run into a
-target profile with five numbers: tempo, mode, timbre, register,
-and warmth. Edge density sets the tempo; brightness and saturation
-set the mode, register, and timbre; warmth carries over. The
-profile drives two music sources.
+I scale each collection's statistics across the run into a target
+profile with five numbers: tempo, mode, timbre, register, and
+warmth. Edge density sets the tempo; brightness and saturation set
+the mode, register, and timbre; warmth carries over. I drive two
+music sources from the profile.
 
 The primary source is the Jamendo catalog of Creative Commons
-music, searched through its public API. The target becomes search
-tags: a bright target gives happy and uplifting tags, a dark one
-melancholic and dramatic ones; a warm target adds acoustic and
-folk, a cool one electronic and ambient; very fast or slow targets
-add energetic or relaxing. Each candidate track is then scored by
-a fixed rule: how close its rated speed is to the target tempo,
-how many of the search tags it carries, whether it can be
-downloaded, and its track identifier as a tie-break. Two practical
-findings shaped this design. Most catalog tracks have no speed
-rating, so the API's own speed filter returns almost nothing; speed
-is scored locally when present and ignored when absent. And a tag
-search can come back empty, so the search retries with fewer tags
-before giving up. The winning track is downloaded, and its title,
-artist, catalog page, and Creative Commons licence are shown on
-the results page.
+music, which I search through its public API. I turn the target
+into search tags: a bright target gives happy and uplifting tags,
+a dark one melancholic and dramatic ones; a warm target adds
+acoustic and folk, a cool one electronic and ambient; very fast or
+slow targets add energetic or relaxing. I then score each
+candidate track by a fixed rule: how close its rated speed is to
+the target tempo, how many of the search tags it carries, whether
+it can be downloaded, and its track identifier as a tie-break. Two
+practical findings shaped my design. Most catalog tracks have no
+speed rating, so the API's own speed filter returns almost
+nothing; I score speed locally when present and ignore it when
+absent. And a tag search can come back empty, so I retry with
+fewer tags before giving up. I download the winning track, and I
+show its title, artist, catalog page, and Creative Commons licence
+on the results page.
 
 The fallback source is four original tracks (calm, bright, warm,
-dramatic) synthesized with NumPy: chord pads, a bass line, and a
-seeded melody, at tempos from 72 to 116 BPM. Each carries the same
-five-number profile, and the fallback picks the track closest to
-the target by a weighted distance. The fallback runs when no API
-key is set, the API is unreachable, or no candidate survives.
-Either way the choice is deterministic: the same photos always get
-the same music, and every score is stored so the choice can be
+dramatic) that I synthesized with NumPy: chord pads, a bass line,
+and a seeded melody, at tempos from 72 to 116 BPM. Each carries
+the same five-number profile, and I pick the track closest to the
+target by a weighted distance. I run the fallback when no API key
+is set, the API is unreachable, or no candidate survives. Either
+way I keep the choice deterministic: the same photos always get
+the same music, and I store every score so the choice can be
 checked later.
 
 \subsection{Slideshow generation}
-Each collection's slideshow uses up to twelve photos nearest the
-collection's center. Every photo fills a $1280 \times 720$ canvas
-over a blurred enlargement of itself, so nothing is cropped. The
-collection's track is mixed in as audio, and the video is encoded
-as H.264 with ffmpeg. Figure \ref{fig:frame} shows one frame; the
-full video is at
+For each collection's slideshow I use up to twelve photos nearest
+the collection's center. I place every photo on a $1280 \times
+720$ canvas over a blurred enlargement of itself, so I crop
+nothing. I mix the collection's track in as audio, and I encode
+the video as H.264 with ffmpeg. Figure \ref{fig:frame} shows one
+frame; the full video is at
 \url{https://drive.google.com/file/d/1i85gaqTzuXiqpCSvA3wFZmRBnSUAeHzE/view}.
 
-Photo changes follow the beat of the music. A beat module
-estimates the track's tempo and beat positions from its onset
-pattern, gives each photo a whole number of beats (about 2.6
-seconds' worth), and places each fade so it lands exactly on a
-beat. When no reliable beat is found, as with near-silent audio,
-the builder keeps fixed 2.6-second timing. The module uses only
-NumPy, so it adds no new dependency.
+I make the photo changes follow the beat of the music. A beat
+module I wrote estimates the track's tempo and beat positions from
+its onset pattern, gives each photo a whole number of beats (about
+2.6 seconds' worth), and places each fade so it lands exactly on a
+beat. When I find no reliable beat, as with near-silent audio, I
+keep fixed 2.6-second timing. The module uses only NumPy, so I add
+no new dependency.
 
 \begin{figure}[htbp]
 \begin{center}
@@ -195,38 +196,38 @@ collection), showing the blurred-fill canvas.}
 \end{figure}
 
 \subsection{Web architecture}
-The service is a Flask application. An upload is stored as a job,
-converted to JPEG at intake (including HEIC, the iPhone format),
-and processed by a background thread while the browser polls a
-status page; the results page then shows each collection's cover,
-statistics, track with an audio player, and video. The service
-takes 8 to 240 photos, and it offers a built-in example run over
-the same 240 seed photos as the notebook run for visitors who do
-not want to upload their own. The hosted service is an add-on
-deployment of the same pipeline; the full 240-image assignment run
-lives in the companion notebook. It runs on Render on a 2 GB
-instance, because smaller tiers run out of memory during feature
-extraction.
+I built the service as a Flask application. I store an upload as a
+job, convert it to JPEG at intake (including HEIC, the iPhone
+format), and process it in a background thread while the browser
+polls a status page; the results page then shows each collection's
+cover, statistics, track with an audio player, and video. I take 8
+to 240 photos, and I offer a built-in example run over the same
+240 seed photos as the notebook run for visitors who do not want
+to upload their own. I deploy the hosted service as an add-on to
+the same pipeline; the full 240-image assignment run lives in the
+companion notebook. I run it on Render on a 2 GB instance, because
+smaller tiers run out of memory during feature extraction.
 
 One intake detail mattered in practice. Phone cameras store
 portrait photos as landscape pixels plus an orientation tag in the
 photo's EXIF data, and the imaging library ignores that tag when
-it re-saves a file. The first deployed version therefore turned
-portrait photos sideways in the covers and videos. Intake now
-applies the EXIF orientation before re-encoding, and the pipeline
-applies it again wherever a photo is opened, so a portrait stays
+it re-saves a file. My first deployed version therefore turned
+portrait photos sideways in the covers and videos. I now apply the
+EXIF orientation at intake before re-encoding, and I apply it
+again wherever the pipeline opens a photo, so a portrait stays
 portrait end to end; two regression tests cover the case.
 
 \section{Implementation and Code Analysis}
-The code is five Python modules: \texttt{app.py} (routes, jobs,
-and page templates, 668 non-comment lines), \texttt{pipeline.py}
-(statistics, embeddings, clustering, covers, video, 230 lines),
-\texttt{music.py} (synthesis and the fallback rule, 145 lines),
-\texttt{jamendo.py} (catalog search, scoring, download, 102
-lines), and \texttt{beats.py} (beat analysis and timing, 116
-lines). Figure \ref{fig:tree} shows the repository layout. Tables
-\ref{tab:cloc} and \ref{tab:lizard} summarize a CLOC count and a
-Lizard complexity analysis of the modules and the tests.
+I wrote the code as five Python modules: \texttt{app.py} (routes,
+jobs, and page templates, 668 non-comment lines),
+\texttt{pipeline.py} (statistics, embeddings, clustering, covers,
+video, 230 lines), \texttt{music.py} (synthesis and the fallback
+rule, 145 lines), \texttt{jamendo.py} (catalog search, scoring,
+download, 102 lines), and \texttt{beats.py} (beat analysis and
+timing, 116 lines). Figure \ref{fig:tree} shows the repository
+layout. Tables \ref{tab:cloc} and \ref{tab:lizard} summarize a
+CLOC count and a Lizard complexity analysis of the modules and the
+tests.
 
 \begin{figure}[htbp]
 \footnotesize
@@ -290,61 +291,61 @@ beats.py & 116 & 8 & 13.8 & 3.9 \\
 Lizard raises one warning: the orchestration function
 \texttt{run\_pipeline} has a cyclomatic complexity of 22 against a
 threshold of 15. The complexity comes from the stages it runs in
-sequence rather than from nested logic; splitting out the
-per-collection cover and video stages is the first refactoring
-candidate, recorded in the project's analysis notes. Most of
+sequence rather than from nested logic; I recorded splitting out
+the per-collection cover and video stages as the first refactoring
+candidate in the project's analysis notes. Most of
 \texttt{app.py}'s line count is its embedded page templates.
 
 \section{Evaluation}
-Thirty-three unit tests cover the music profiles and synthesis, the
-selection rule and its tie-breaks, the visual statistics, recovery
-of a known group count from synthetic embeddings, the web routes,
-the catalog module and its fallbacks, and the beat module (tempo
-and beat recovery on synthetic tracks, no beat for silence, and
-the timing planner's rules, and two regression tests that
-portrait photos keep their orientation. All thirty-three pass in
-about ten seconds.
+I cover the system with thirty-three unit tests: the music
+profiles and synthesis, the selection rule and its tie-breaks, the
+visual statistics, recovery of a known group count from synthetic
+embeddings, the web routes, the catalog module and its fallbacks,
+and the beat module (tempo and beat recovery on synthetic tracks,
+no beat for silence, and the timing planner's rules), plus two
+regression tests that portrait photos keep their orientation. All
+thirty-three pass in about ten seconds.
 
-The full assignment run, executed in the notebook, used the fixed
-dataset of 240 photographs: 30 each from eight topics (mountains,
-beach, city, forest, desert, snow, dogs, and flowers), all from
-Wikimedia Commons, with creator and license recorded in the
-dataset manifest. The silhouette score peaked at $k = 8$ (0.150,
-against 0.144 at $k = 7$ and 0.143 at $k = 9$); a second method,
-agglomerative clustering, scored 0.147 at the same $k$. Against
-the known topics, the eight collections scored a purity of 0.821
-and a normalized mutual information of 0.739. Five of the eight
-collections were at least 90 percent one topic; the mixing
-concentrated in the forest, mountains, and snow collections, whose
-topics share texture and color. Slideshow videos were built for
-the three largest collections.
+For the full assignment run, which I executed in the notebook, I
+used the fixed dataset of 240 photographs: 30 each from eight
+topics (mountains, beach, city, forest, desert, snow, dogs, and
+flowers), all from Wikimedia Commons, with creator and license
+recorded in the dataset manifest. The silhouette score peaked at
+$k = 8$ (0.150, against 0.144 at $k = 7$ and 0.143 at $k = 9$); I
+also scored a second method, agglomerative clustering, at 0.147 at
+the same $k$. Against the known topics, the eight collections
+scored a purity of 0.821 and a normalized mutual information of
+0.739. Five of the eight collections were at least 90 percent one
+topic; the mixing concentrated in the forest, mountains, and snow
+collections, whose topics share texture and color. I built
+slideshow videos for the three largest collections.
 
-Two end-to-end runs of the web service used 24 photos spanning
-four topics. With the synthesized library, the system chose
-$k = 4$ (silhouette 0.159), produced collections of 7, 5, 6, and 6
-photos, picked the warm track twice and the calm track twice, and
-rendered four videos, each verified as H.264 video with AAC
-audio. With the catalog enabled, all four collections received
-real Creative Commons tracks: \textit{plaid shirt (revisited)} by
-Ton, \textit{Life is good} by Galdson, \textit{Breathe} by Axl \&
+I ran the web service end to end twice with 24 photos spanning
+four topics. With the synthesized library, it chose $k = 4$
+(silhouette 0.159), produced collections of 7, 5, 6, and 6 photos,
+picked the warm track twice and the calm track twice, and rendered
+four videos; I verified each as H.264 video with AAC audio. With
+the catalog enabled, all four collections received real Creative
+Commons tracks: \textit{plaid shirt (revisited)} by Ton,
+\textit{Life is good} by Galdson, \textit{Breathe} by Axl \&
 Arth, and \textit{Energy} by Pokki DJ. Four collections that had
 shared two synthesized tracks now carried four distinct recorded
 songs, each traceable to the profile that selected it.
 
-Beat timing was checked in a further run of the same photos. The
+I checked beat timing in a further run of the same photos. My
 analyzer measured all four tracks, at 104.8, 143.8, 124.6, and
 128.3 BPM; one synthesized track plays its melody on eighth notes,
 so its measured grid is the eighth-note grid, and changes still
 land on note onsets. Each video's measured length matched its
-planned beat total within about a tenth of a second. The built-in
-example run was also verified live: it fetched all 240 seed
+planned beat total within about a tenth of a second. I also
+verified the built-in example run live: it fetched all 240 seed
 photos, chose $k = 8$ with silhouette 0.15, and produced eight
 beat-timed collections, five with catalog tracks and three with
 synthesized ones.
 
 \subsection{Walkthrough of the hosted service}
 Figures \ref{fig:wt-home} to \ref{fig:wt-results} walk through one
-live run with the same 24 photos. The upload page
+live run I made with the same 24 photos. The upload page
 (Fig. \ref{fig:wt-home}) takes the photos and starts the job. The
 status page (Fig. \ref{fig:wt-working}) reports each stage as it
 finishes, here caught during the music stage. The results page
@@ -381,29 +382,29 @@ collection's cover sheet and statistics.}
 \end{figure}
 
 \section{Limitations}
-K-Means favors round, similarly sized groups, so a collection
-with one main subject and many outliers can split awkwardly.
-Catalog metadata is uneven: many tracks have no speed rating and
-tag wording varies by uploader, so matches are only as precise as
-the catalog's own descriptions. The synthesized tracks are
-deliberately simple; in both sources the contribution is the
-selection rule, not the composition. Processing runs on CPU, so
-large uploads take minutes, and job results sit on the service's
-local disk and do not survive redeploys.
+K-Means favors round, similarly sized groups, so a collection with
+one main subject and many outliers can split awkwardly. Catalog
+metadata is uneven: many tracks have no speed rating and tag
+wording varies by uploader, so my matches are only as precise as
+the catalog's own descriptions. I kept the synthesized tracks
+deliberately simple; in both sources my contribution is the
+selection rule, not the composition. I run processing on CPU, so
+large uploads take minutes, and I store job results on the
+service's local disk, where they do not survive redeploys.
 
 \section{Conclusion}
 A course pipeline for grouping photos and choosing music by rule
 carries over cleanly to a public web service. The pieces that made
-the original system defensible, measured statistics, a documented
+my original system defensible, measured statistics, a documented
 selection rule, and stored scores, are the same pieces that make
 the hosted version explainable: every album can say why its photos
-are together and why its music was chosen.
+are together and why the rule picked its music.
 
 \section*{Artifact Availability}
-All of the artifacts are collected here. The executed Jupyter
+I collected all of the artifacts here. The executed Jupyter
 notebook with the full 240-image run opens in Google Colab at
 \url{https://colab.research.google.com/github/jamelski1/seng691-hw5/blob/main/seng691-hw5.ipynb};
-its source repository, including the dataset manifest, is
+I keep its source repository, including the dataset manifest, at
 \url{https://github.com/jamelski1/seng691-hw5}. The dataset is
 public: the manifest listing all 240 photographs with their
 creators, licenses, and Wikimedia Commons source pages is at
@@ -416,10 +417,10 @@ The web service source is at
 service is at \url{https://photo-albums-y7ir.onrender.com}.
 
 \section*{AI Use Disclosure}
-The author used AI assistants (Claude and Llama) during
-development of the web service, including implementation and
-testing support. The author executed and verified all code, and
-every reported result comes from those verified runs.
+I used AI assistants (Claude and Llama) during development of
+the web service, including implementation and testing support.
+I executed and verified all code, and every reported result
+comes from those verified runs.
 
 \begin{thebibliography}{00}
 \bibitem{he2016} K. He, X. Zhang, S. Ren, and J. Sun, ``Deep residual
