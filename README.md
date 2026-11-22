@@ -11,12 +11,18 @@ uploads a set of photos and the app:
    silhouette score.
 4. Builds a contact-sheet cover for each collection from the photos
    closest to its center.
-5. Synthesizes a small library of original music tracks in code and picks
-   one per collection with a fixed weighted-distance rule over the
-   collection's visual statistics (edge density drives tempo; brightness
-   and saturation drive mode, register and timbre; warmth carries over).
-   The choice is algorithmic, never manual and never random, and the
-   scores are kept in the job's result file.
+5. Picks background music per collection with a fixed rule over the
+   collection's visual statistics. The rule first produces a target
+   profile (edge density drives tempo; brightness and saturation drive
+   mode, register and timbre; warmth carries over). With a Jamendo API
+   client ID configured, the target becomes a mood-tag and tempo search
+   over Jamendo's Creative Commons catalog and the best-scoring real
+   track is downloaded, with its artist and licence credited on the
+   results page. Without an ID, or if the API is unreachable, the app
+   falls back to a small library of original tracks synthesized in code,
+   scored by weighted distance to the same target. Either way the choice
+   is algorithmic, never manual and never random, and the scores are
+   kept in the job's result file.
 6. Generates a slideshow video per collection (2.6 seconds per photo on a
    blurred-fill 1280x720 canvas with fades) with the chosen track mixed in.
 
@@ -29,6 +35,14 @@ python3 -m venv venv
 ```
 
 Open http://localhost:5000 and upload between 8 and 60 photos.
+
+For real music instead of the synthesized fallback, register a free
+non-commercial app at https://devportal.jamendo.com and set the client
+ID in the environment before starting:
+
+```bash
+JAMENDO_CLIENT_ID=your_client_id ./venv/bin/python app.py
+```
 
 ## Deploy on Render
 
@@ -45,4 +59,8 @@ On a smaller plan the feature step runs out of memory.
 - `pipeline.py` — statistics, embeddings, clustering, covers, videos.
 - `music.py` — procedural track synthesis and the selection rule, carried
   over from the assignment system.
+- `jamendo.py` — Jamendo API source: target-to-query mapping, candidate
+  scoring, download, and attribution data.
+- `tests/` — unit tests (23, all passing).
+- `docs/` — CLOC and Lizard code analysis with full tool outputs.
 - `jobs/` — one folder per upload (created at runtime, not committed).

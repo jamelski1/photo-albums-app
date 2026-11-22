@@ -19,6 +19,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+import jamendo
 import music
 
 BATCH = 16
@@ -126,7 +127,7 @@ def ffmpeg_bin():
     return imageio_ffmpeg.get_ffmpeg_exe()
 
 
-def build_slideshow(image_paths, wav_path, out_path, progress=None):
+def build_slideshow(image_paths, audio_path, out_path, progress=None):
     """Same recipe as the assignment notebook: each photo becomes a 2.6 s
     segment on a blurred-fill 1280x720 canvas with fades, segments are
     concatenated, and the cluster's music track is muxed in with a fade
@@ -159,7 +160,8 @@ def build_slideshow(image_paths, wav_path, out_path, progress=None):
         run([ff, "-y", "-f", "concat", "-safe", "0", "-i", str(td / "list.txt"),
              "-c", "copy", str(td / "joined.mp4")])
         fade_start = max(0.0, total_seconds - 2.0)
-        run([ff, "-y", "-i", str(td / "joined.mp4"), "-i", str(wav_path),
+        run([ff, "-y", "-i", str(td / "joined.mp4"),
+             "-stream_loop", "-1", "-i", str(audio_path),
              "-c:v", "copy", "-c:a", "aac", "-b:a", "160k",
              "-af", f"afade=t=out:st={fade_start:.1f}:d=2", "-shortest",
              str(out_path)])
@@ -215,13 +217,23 @@ def run_pipeline(job_dir, progress):
         build_montage([paths[i] for i in order[:12]], out_dir / f"montage_cluster_{c}.jpg")
 
     progress("Scoring music for each collection")
-    music_dir = music.ensure_tracks(job_dir / "music")
+    music_dir = Path(music.ensure_tracks(job_dir / "music"))
     choices = music.choose_for_clusters(clusters)
     for info in clusters:
         c = info["cluster"]
         track, target, scores = choices[c]
-        info["music"] = {"track": track, "scores": scores,
-                         "target": {k: round(v, 3) for k, v in target.items()}}
+        entry = {"track": track, "source": "synth", "file": f"{track}.wav",
+                 "scores": scores,
+                 "target": {k: round(v, 3) for k, v in target.items()}}
+        pick = jamendo.pick_for_target(target)
+        if pick is not None:
+            dest = music_dir / f"jamendo_cluster_{c}.mp3"
+            if jamendo.download(pick["audio_url"], dest):
+                entry.update(pick)
+                entry["track"] = pick["title"]
+                entry["file"] = dest.name
+                entry["synth_track"] = track
+        info["music"] = entry
 
     for info in clusters:
         c = info["cluster"]
@@ -229,7 +241,7 @@ def run_pipeline(job_dir, progress):
         idx = np.where(labels == c)[0]
         order = idx[np.argsort(dists[idx, c])]
         members = [paths[i] for i in order[:12]]
-        build_slideshow(members, music_dir / f"{info['music']['track']}.wav",
+        build_slideshow(members, music_dir / info["music"]["file"],
                         out_dir / f"slideshow_cluster_{c}.mp4")
         info["video"] = f"slideshow_cluster_{c}.mp4"
         info["montage"] = f"montage_cluster_{c}.jpg"

@@ -33,9 +33,10 @@ HOME = """
 button{font-size:1rem;padding:.6rem 1.2rem;border-radius:8px}</style>
 <h1>Automatic Photo Albums</h1>
 <p>Upload a set of photos and the system will group similar photos into
-collections, build a cover sheet for each one, compose background music
-chosen by a rule from each collection's colors and detail, and generate a
-slideshow video for every collection.</p>
+collections, build a cover sheet for each one, match background music to
+each collection by a rule over its colors and detail, using Creative
+Commons tracks from Jamendo with music synthesized in code as a
+fallback, and generate a slideshow video for every collection.</p>
 <p>It uses a pre-trained ResNet-50 to understand the photos and K-Means to
 group them, the same method as the SENG 691 Assignment 5 system.</p>
 <form action="/upload" method="post" enctype="multipart/form-data">
@@ -83,9 +84,16 @@ img.cover{max-width:100%;border-radius:8px} video{max-width:100%;border-radius:8
   </p>
   <p>Brightness {{ "%.2f"|format(c.mean_brightness) }}, saturation {{ "%.2f"|format(c.mean_saturation) }},
      warmth {{ "%+.2f"|format(c.mean_warmth) }}, detail {{ "%.3f"|format(c.mean_edge_density) }}.</p>
-  <p><strong>Music: {{ c.music.track }}</strong>, chosen by the scoring rule
-     (tempo from detail, brightness and tone from color).</p>
-  <p><audio controls src="/files/{{ job_id }}/music/{{ c.music.track }}.wav"></audio></p>
+  {% if c.music.source == "jamendo" %}
+  <p><strong>Music: {{ c.music.track }}</strong> by {{ c.music.artist }},
+     a Creative Commons track from <a href="{{ c.music.page_url }}">Jamendo</a>,
+     matched to this collection by the scoring rule
+     (tags: {{ c.music.query_tags|join(", ") }}; speed: {{ c.music.query_speed }}).</p>
+  {% else %}
+  <p><strong>Music: {{ c.music.track }}</strong>, synthesized in code and chosen
+     by the scoring rule (tempo from detail, brightness and tone from color).</p>
+  {% endif %}
+  <p><audio controls src="/files/{{ job_id }}/music/{{ c.music.file }}"></audio></p>
   <video controls src="/files/{{ job_id }}/output/{{ c.video }}"></video>
 </div>
 {% endfor %}

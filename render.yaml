@@ -11,3 +11,9 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.8
+      # Jamendo API client ID for real Creative Commons tracks. Set the
+      # value in the Render dashboard (Environment tab); it is never
+      # committed to the repository. Without it the app falls back to
+      # its synthesized music library.
+      - key: JAMENDO_CLIENT_ID
+        sync: false
