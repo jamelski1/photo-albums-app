@@ -37,6 +37,9 @@ uploads a set of photos and the app:
   https://drive.google.com/file/d/1i85gaqTzuXiqpCSvA3wFZmRBnSUAeHzE/view
 - Assignment repository (notebook, report, dataset manifest):
   https://github.com/jamelski1/seng691-hw5
+- Dataset (public): the manifest of all 240 seed photographs, with
+  creators, licenses, and Wikimedia Commons source pages:
+  https://github.com/jamelski1/photo-albums-app/blob/main/data/example_manifest.csv
 
 ## Run locally
 
