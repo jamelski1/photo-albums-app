@@ -65,6 +65,6 @@ On a smaller plan the feature step runs out of memory.
   over from the assignment system.
 - `jamendo.py` — Jamendo API source: target-to-query mapping, candidate
   scoring, download, and attribution data.
-- `tests/` — unit tests (23, all passing).
+- `tests/` — unit tests (28, all passing).
 - `docs/` — CLOC and Lizard code analysis with full tool outputs.
 - `jobs/` — one folder per upload (created at runtime, not committed).

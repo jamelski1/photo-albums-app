@@ -127,11 +127,16 @@ def ffmpeg_bin():
     return imageio_ffmpeg.get_ffmpeg_exe()
 
 
-def build_slideshow(image_paths, audio_path, out_path, progress=None):
-    """Same recipe as the assignment notebook: each photo becomes a 2.6 s
-    segment on a blurred-fill 1280x720 canvas with fades, segments are
-    concatenated, and the cluster's music track is muxed in with a fade
-    out at the end."""
+def build_slideshow(image_paths, audio_path, out_path, progress=None,
+                    beat_info=None):
+    """Each photo becomes a segment on a blurred-fill 1280x720 canvas
+    with fades, segments are concatenated, and the cluster's music
+    track is muxed in with a fade out at the end. Without beat info
+    every photo gets the fixed 2.6 s of the original recipe. With
+    beat info (from beats.analyze), each photo gets a whole number of
+    beats and every fade is centered on a beat: the fade out of one
+    photo and the fade in of the next meet exactly on the beat grid,
+    so the picture changes on the beat."""
     import tempfile
 
     ff = ffmpeg_bin()
@@ -139,18 +144,28 @@ def build_slideshow(image_paths, audio_path, out_path, progress=None):
     def run(cmd):
         subprocess.run(cmd, check=True, capture_output=True, text=True)
 
-    total_seconds = 2.6 * len(image_paths)
+    if beat_info:
+        import beats
+        durations, _ = beats.plan_segments(len(image_paths), beat_info)
+        half = min(0.5, max(0.2, beat_info["period"] / 2.0))
+    else:
+        durations = [2.6] * len(image_paths)
+        half = 0.4
+    total_seconds = sum(durations)
     with tempfile.TemporaryDirectory() as td:
         td = Path(td)
         segs = []
         for i, p in enumerate(image_paths):
             seg = td / f"seg_{i:02d}.mp4"
+            d = durations[i]
+            out_st = max(0.0, d - half)
             vf = ("[0:v]scale=1280:720:force_original_aspect_ratio=increase,"
                   "crop=1280:720,boxblur=24:6[bg];"
                   "[0:v]scale=1280:720:force_original_aspect_ratio=decrease[fg];"
                   "[bg][fg]overlay=(W-w)/2:(H-h)/2,"
-                  "fade=t=in:st=0:d=0.4,fade=t=out:st=2.2:d=0.4,format=yuv420p")
-            run([ff, "-y", "-loop", "1", "-t", "2.6", "-i", str(p),
+                  f"fade=t=in:st=0:d={half:.3f},"
+                  f"fade=t=out:st={out_st:.3f}:d={half:.3f},format=yuv420p")
+            run([ff, "-y", "-loop", "1", "-t", f"{d:.3f}", "-i", str(p),
                  "-filter_complex", vf, "-r", "30", "-c:v", "libx264",
                  "-preset", "veryfast", "-crf", "22", str(seg)])
             segs.append(seg)
@@ -165,6 +180,11 @@ def build_slideshow(image_paths, audio_path, out_path, progress=None):
              "-c:v", "copy", "-c:a", "aac", "-b:a", "160k",
              "-af", f"afade=t=out:st={fade_start:.1f}:d=2", "-shortest",
              str(out_path)])
+    if beat_info:
+        return {"bpm": beat_info["bpm"], "period": beat_info["period"],
+                "offset": beat_info["offset"],
+                "durations": durations}
+    return None
 
 
 def run_pipeline(job_dir, progress):
@@ -241,8 +261,14 @@ def run_pipeline(job_dir, progress):
         idx = np.where(labels == c)[0]
         order = idx[np.argsort(dists[idx, c])]
         members = [paths[i] for i in order[:12]]
-        build_slideshow(members, music_dir / info["music"]["file"],
-                        out_dir / f"slideshow_cluster_{c}.mp4")
+        audio_file = music_dir / info["music"]["file"]
+        import beats
+        beat_info = beats.analyze(audio_file)
+        timing = build_slideshow(members, audio_file,
+                                 out_dir / f"slideshow_cluster_{c}.mp4",
+                                 beat_info=beat_info)
+        if timing:
+            info["timing"] = timing
         info["video"] = f"slideshow_cluster_{c}.mp4"
         info["montage"] = f"montage_cluster_{c}.jpg"
 
