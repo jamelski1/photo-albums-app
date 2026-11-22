@@ -216,7 +216,7 @@ HOME = """{% extends "base.html" %}
 <form action="{{ url_for('example') }}" method="post">
   <p class="muted">No photos handy?
   <button class="btn" type="submit">Run the 240-photo example</button>
-  The built-in set from the full assignment run: mountains, beach, city and forest photos from Wikimedia Commons.</p>
+  The built-in set from the full assignment run: 240 photos across eight topics, from Wikimedia Commons.</p>
 </form>
 
 <ol class="steps" aria-label="How it works">
@@ -572,11 +572,33 @@ def _run_job(job_id):
 EXAMPLE_MANIFEST = BASE / "data" / "example_manifest.csv"
 
 
+def _original_url(url):
+    """The full-resolution original for a Wikimedia thumbnail URL, or
+    None when the URL is not a Wikimedia thumbnail."""
+    import urllib.parse
+
+    parts = urllib.parse.urlsplit(url)
+    if parts.hostname != "thumb.wikimedia.org":
+        return None
+    seg = parts.path.split("/")
+    # /wikipedia/commons/thumb/<h1>/<h2>/<file>/<width>px-<file>
+    if len(seg) >= 8 and seg[3] == "thumb":
+        return urllib.parse.urlunsplit(
+            ("https", "upload.wikimedia.org",
+             "/".join(seg[:3] + seg[4:7]), "", ""))
+    return None
+
+
 def _fetch_example_photos(images_dir, progress=None):
     """Download the built-in example set, the 240 seed photos of the
     full assignment run, hosted on Wikimedia Commons, into a job's
-    images folder. Returns how many photos were fetched."""
+    images folder. Each photo is tried as the manifest's thumbnail
+    URL and then, if that keeps failing, as the full-resolution
+    original, with pauses between requests so 240 downloads do not
+    trip the host's rate limits. Returns how many photos were
+    fetched."""
     import csv
+    import time
     import urllib.request
 
     with open(EXAMPLE_MANIFEST, newline="") as f:
@@ -584,21 +606,30 @@ def _fetch_example_photos(images_dir, progress=None):
     saved = 0
     for row in rows:
         tmp = images_dir / f"raw_{saved:03d}.jpg"
-        for attempt in range(3):
-            try:
-                req = urllib.request.Request(
-                    row["image_url"],
-                    headers={"User-Agent": "photo-albums-example/1.0"})
-                raw = urllib.request.urlopen(req, timeout=60).read()
-                tmp.write_bytes(raw)
-                img = Image.open(tmp).convert("RGB")
-                img.save(images_dir / f"photo_{saved:03d}.jpg", quality=92)
-                tmp.unlink(missing_ok=True)
-                saved += 1
-                break
-            except Exception:
-                if attempt == 2:
+        candidates = [row["image_url"]]
+        original = _original_url(row["image_url"])
+        if original:
+            candidates.append(original)
+        fetched = False
+        for url in candidates:
+            for attempt in range(3):
+                try:
+                    req = urllib.request.Request(
+                        url, headers={"User-Agent": "photo-albums-example/1.0"})
+                    raw = urllib.request.urlopen(req, timeout=60).read()
+                    tmp.write_bytes(raw)
+                    img = Image.open(tmp).convert("RGB")
+                    img.save(images_dir / f"photo_{saved:03d}.jpg", quality=92)
                     tmp.unlink(missing_ok=True)
+                    saved += 1
+                    fetched = True
+                    break
+                except Exception:
+                    tmp.unlink(missing_ok=True)
+                    time.sleep(2 ** attempt)
+            if fetched:
+                break
+        time.sleep(0.1)
         if progress and saved and saved % 40 == 0:
             progress(f"Fetching the example photos ({saved} of {len(rows)})")
     return saved

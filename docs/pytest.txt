@@ -1,4 +1,41 @@
-..............................                                           [100%]
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- /home/hatch/workspace/photo-albums-app/venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/hatch/workspace/photo-albums-app
+collecting ... collected 31 items
+
+tests/test_app.py::test_home_page_loads PASSED                           [  3%]
+tests/test_app.py::test_upload_rejects_too_few_photos PASSED             [  6%]
+tests/test_app.py::test_upload_rejects_empty_submission PASSED           [  9%]
+tests/test_app.py::test_example_route_starts_a_job PASSED                [ 12%]
+tests/test_app.py::test_fetch_example_photos PASSED                      [ 16%]
+tests/test_app.py::test_original_url_derivation PASSED                   [ 19%]
+tests/test_app.py::test_unknown_job_is_404 PASSED                        [ 22%]
+tests/test_beats.py::test_click_track_tempo_and_phase PASSED             [ 25%]
+tests/test_beats.py::test_click_track_slower_tempo PASSED                [ 29%]
+tests/test_beats.py::test_kick_hat_tempo PASSED                          [ 32%]
+tests/test_beats.py::test_silence_has_no_beats PASSED                    [ 35%]
+tests/test_beats.py::test_plan_segments_boundaries_on_grid PASSED        [ 38%]
+tests/test_jamendo.py::test_speed_buckets PASSED                         [ 41%]
+tests/test_jamendo.py::test_query_mapping_bright_fast_warm PASSED        [ 45%]
+tests/test_jamendo.py::test_query_mapping_dark_slow_cool PASSED          [ 48%]
+tests/test_jamendo.py::test_pick_prefers_speed_and_tag_match_and_is_deterministic PASSED [ 51%]
+tests/test_jamendo.py::test_pick_none_without_client_id PASSED           [ 54%]
+tests/test_jamendo.py::test_pick_none_on_api_failure_and_empty_results PASSED [ 58%]
+tests/test_jamendo.py::test_download_size_check PASSED                   [ 61%]
+tests/test_music.py::test_track_profiles_have_expected_mode_and_tempo_order PASSED [ 64%]
+tests/test_music.py::test_synth_track_is_finite_normalized_and_long_enough PASSED [ 67%]
+tests/test_music.py::test_ensure_tracks_writes_four_readable_wavs PASSED [ 70%]
+tests/test_music.py::test_choose_track_is_deterministic PASSED           [ 74%]
+tests/test_music.py::test_choose_track_scores_all_tracks_and_dark_cluster_prefers_dramatic PASSED [ 77%]
+tests/test_music.py::test_norm_helper PASSED                             [ 80%]
+tests/test_pipeline.py::test_visual_stats_white_is_bright_and_unsaturated PASSED [ 83%]
+tests/test_pipeline.py::test_visual_stats_red_is_warm_and_blue_is_cool PASSED [ 87%]
+tests/test_pipeline.py::test_visual_stats_checkerboard_has_more_edges_than_solid PASSED [ 90%]
+tests/test_pipeline.py::test_choose_k_recovers_three_blobs PASSED        [ 93%]
+tests/test_pipeline.py::test_choose_k_respects_small_inputs PASSED       [ 96%]
+tests/test_pipeline.py::test_build_montage_dimensions PASSED             [100%]
+
 =============================== warnings summary ===============================
 tests/test_pipeline.py::test_visual_stats_white_is_bright_and_unsaturated
 tests/test_pipeline.py::test_visual_stats_red_is_warm_and_blue_is_cool
@@ -8,4 +45,4 @@ tests/test_pipeline.py::test_visual_stats_checkerboard_has_more_edges_than_solid
     return fit_method(estimator, *args, **kwargs)
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-30 passed, 4 warnings in 7.14s
+======================= 31 passed, 4 warnings in 10.64s ========================

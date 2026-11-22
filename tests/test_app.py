@@ -63,6 +63,14 @@ def test_fetch_example_photos(tmp_path, monkeypatch):
     assert (images_dir / "photo_001.jpg").exists()
 
 
+def test_original_url_derivation():
+    thumb = ("https://thumb.wikimedia.org/wikipedia/commons/thumb/8/88/"
+             "Zagedan_Lakes.jpg/1920px-Zagedan_Lakes.jpg?utm_source=x")
+    assert app_module._original_url(thumb) == (
+        "https://upload.wikimedia.org/wikipedia/commons/8/88/Zagedan_Lakes.jpg")
+    assert app_module._original_url("https://example.com/a.jpg") is None
+
+
 def test_unknown_job_is_404(client):
     assert client.get("/job/doesnotexist").status_code == 404
     assert client.get("/job/doesnotexist/status.json").status_code == 404

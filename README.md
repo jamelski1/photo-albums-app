@@ -23,8 +23,20 @@ uploads a set of photos and the app:
    scored by weighted distance to the same target. Either way the choice
    is algorithmic, never manual and never random, and the scores are
    kept in the job's result file.
-6. Generates a slideshow video per collection (2.6 seconds per photo on a
-   blurred-fill 1280x720 canvas with fades) with the chosen track mixed in.
+6. Generates a slideshow video per collection on a blurred-fill 1280x720
+   canvas, with each photo shown for a whole number of beats of the
+   chosen track and the fades landing on the beat (fixed 2.6-second
+   timing when no beat can be measured), and the track mixed in.
+
+## Links
+
+- Live service: https://photo-albums-y7ir.onrender.com
+- Jupyter notebook with the full 240-image run (opens in Google Colab):
+  https://colab.research.google.com/github/jamelski1/seng691-hw5/blob/main/seng691-hw5.ipynb
+- A generated slideshow video (Google Drive):
+  https://drive.google.com/file/d/1i85gaqTzuXiqpCSvA3wFZmRBnSUAeHzE/view
+- Assignment repository (notebook, report, dataset manifest):
+  https://github.com/jamelski1/seng691-hw5
 
 ## Run locally
 

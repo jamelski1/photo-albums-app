@@ -1,0 +1,459 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+
+\begin{document}
+
+\title{Automatic Photo Albums as a Web Service: Content-Based Photo
+Grouping with Algorithmically Matched Music}
+
+\author{\IEEEauthorblockN{Jamel Lawson}
+\IEEEauthorblockA{\textit{Department of Information Systems} \\
+\textit{University of Maryland, Baltimore County}\\
+Baltimore, MD \\
+jlawson2@umbc.edu}}
+
+\maketitle
+
+\begin{abstract}
+This paper presents a web service that turns an uploaded set of
+photographs into finished slideshow albums. The system measures
+visual statistics for each photo, extracts embeddings with a
+pre-trained ResNet-50 network, and groups the photos with K-Means
+clustering, choosing the number of collections by silhouette score.
+For every collection it builds a contact-sheet cover and selects
+background music by a fixed rule: the collection's statistics become
+a target profile, the profile becomes a mood-tag search over the
+Jamendo catalog of Creative Commons tracks, and a deterministic
+scoring function picks one track, with tracks synthesized in code as
+a fallback. It then renders a slideshow video per collection with
+the selected track mixed in. The service is a hosted deployment of a
+pipeline first built as a course assignment system; the paper
+describes its design and implementation, a static code analysis with
+CLOC and Lizard, and a twenty-three-test unit suite with end-to-end
+runs in which 24 photos were grouped into four collections.
+\end{abstract}
+
+\begin{IEEEkeywords}
+image clustering, transfer learning, ResNet-50, algorithmic media
+selection, Creative Commons music, web services
+\end{IEEEkeywords}
+
+\section{Introduction}
+Personal photo collections grow faster than anyone organizes them. A
+tool that groups similar photos and presents each group as a short
+video album removes the manual sorting step. Two design questions
+follow. First, how should similarity be measured so that the groups
+are visually meaningful? Second, when each album needs background
+music, how should the music be chosen so that the choice is principled
+and reproducible rather than a person's taste or a random draw?
+
+This paper describes a system that answers both. Similarity comes
+from embeddings of a pre-trained ResNet-50 network \cite{he2016},
+which capture shape and texture without training on the user's
+photos. Grouping is K-Means over those embeddings with the cluster
+count selected by silhouette score \cite{rousseeuw1987}. Music is
+handled by a documented rule in two steps: the collection's measured
+brightness, saturation, warmth, and edge density are converted into a
+target musical profile, and the profile drives a scored search over a
+catalog of Creative Commons tracks, with a small library of tracks
+synthesized in code as an offline fallback. In the terms of Poole
+and Mackworth \cite{poole2017}, the service is a simple computational
+agent: it perceives each upload through measured features and acts by
+producing albums, with every decision rule fixed in advance and open
+to inspection.
+
+The system began as a notebook-based assignment project for a
+graduate course on AI agents and deep learning, where it processed a
+fixed dataset of 240 licensed photographs from Wikimedia Commons and
+scored a cluster purity of 0.821 and a normalized mutual information
+of 0.739 against the photos' source topics. The work reported here
+turns that pipeline into a public web service: a visitor uploads
+between 8 and 240 photos and receives covers, music, and slideshow
+videos for every collection the system finds.
+
+\section{System Design}
+
+Figure \ref{fig:pipeline} summarizes the pipeline end to end. Each
+stage is deterministic, and the intermediate quantities it produces,
+the statistics, the silhouette scores, and the music scores, are
+stored with the job so every output can be explained after the fact.
+
+\begin{figure*}[htbp]
+\begin{center}
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  box/.style={draw, rounded corners, align=center, font=\small,
+              text width=2.45cm, minimum height=1.15cm},
+  arrow/.style={-{Stealth}, thick}]
+\node[box] (up) {Upload\\8--60 photos};
+\node[box, right=0.55cm of up] (feat) {Visual statistics\\+ ResNet-50 embeddings};
+\node[box, right=0.55cm of feat] (km) {K-Means grouping\\$k$ by silhouette};
+\node[box, right=0.55cm of km] (cov) {Per collection:\\cover + target profile};
+\node[box, right=0.55cm of cov] (mus) {Music rule\\Jamendo catalog,\\synth fallback};
+\node[box, right=0.55cm of mus] (vid) {Slideshow videos\\+ results page};
+\draw[arrow] (up) -- (feat);
+\draw[arrow] (feat) -- (km);
+\draw[arrow] (km) -- (cov);
+\draw[arrow] (cov) -- (mus);
+\draw[arrow] (mus) -- (vid);
+\end{tikzpicture}}
+\caption{The album pipeline, from upload to finished slideshows.}
+\label{fig:pipeline}
+\end{center}
+\end{figure*}
+
+\subsection{Visual statistics}
+Each photo is reduced to a $128 \times 128$ thumbnail from which four
+statistics are computed: brightness (mean of the per-pixel maximum
+channel), saturation (mean HSV-style saturation over non-black
+pixels), warmth (mean red minus mean blue), and edge density (mean
+absolute gradient of the grayscale image). A three-center K-Means
+over a pixel subsample gives three dominant colors per photo. These
+statistics are cheap, explainable, and are exactly the quantities the
+music rule consumes.
+
+\subsection{Feature extraction}
+Photos are embedded with ResNet-50 pre-trained on ImageNet
+\cite{deng2009}, with the classification head replaced by the
+identity so the 2048-dimensional pooled features are kept. Embeddings
+are L2-normalized, which makes Euclidean K-Means behave like cosine
+similarity grouping. Transfer features are the right tool here: the
+service must handle arbitrary user photos with no training set of its
+own.
+
+\subsection{Clustering}
+K-Means is fit for each candidate $k$ in an adaptive range (bounded
+by the number of uploaded photos) and the $k$ with the highest
+silhouette score is kept. Cluster quality on the original assignment
+dataset was evaluated against the photos' source topics; for
+arbitrary uploads no ground truth exists, so the service reports the
+silhouette scores it used to choose $k$ and describes each collection
+by its size, its dominant colors, and its mean visual statistics.
+
+\subsection{Music sources and the selection rule}
+For each collection, a target profile is derived from its statistics,
+min-max normalized across the collections of the run: edge density
+sets the target tempo, brightness and saturation set the target mode,
+register, and timbre, and warmth carries over. The target is a point
+in a five-dimensional space of normalized tempo, mode, timbre,
+register, and warmth, and it drives two music sources.
+
+The primary source is the Jamendo catalog of Creative Commons music,
+queried through its public API. The target is translated into search
+terms: a bright target yields happy and uplifting tags, a dark one
+melancholic and dramatic ones; a warm target adds acoustic and folk
+terms, a cool one electronic and ambient; extreme tempos add
+energetic or relaxing. Candidate tracks are then scored locally by a
+deterministic tuple: distance between the track's rated speed and
+the target tempo bucket, tag overlap with the query (more is
+better), whether the track may be downloaded, and finally the track
+identifier as a stable tie-break. Two practical findings shaped this
+design. The API's own speed filter is unusable, because most catalog
+tracks carry no speed rating and filtering by it returns almost
+nothing, so speed is scored locally when present and treated as
+neutral when absent. And a tag query can return empty, so the query
+retries with fewer tags before giving up. The chosen track is
+downloaded, and its title, artist, catalog page, and Creative
+Commons licence are shown on the results page as attribution.
+
+The fallback source is a small library of four original tracks
+(calm, bright, warm, dramatic) synthesized with NumPy: chord pads, a
+bass line, and a seeded pentatonic melody, rendered at tempos from
+72 to 116 BPM in major modes, except the minor-mode dramatic track.
+Each carries the same five-dimensional profile, and the fallback
+selection is the track minimizing a weighted squared distance to the
+target, with weights 1.4 (tempo), 1.2 (mode), 0.8 (timbre),
+0.8 (register), and 1.0 (warmth). The fallback engages when no API
+key is configured, the API is unreachable, or no candidate survives;
+either way the rule is deterministic, the same photos always produce
+the same music, and every score is stored with the result so the
+choice can be audited.
+
+\subsection{Slideshow generation}
+Each collection's slideshow takes up to twelve photos nearest its
+cluster center. Every photo becomes a segment on a
+$1280 \times 720$ canvas, composed over a blurred enlargement of
+itself, with short fades. Segments are concatenated and the
+collection's track is mixed in as AAC audio with a two-second fade
+out, encoded as H.264 video with the \texttt{imageio-ffmpeg}
+distribution of ffmpeg. Figure \ref{fig:frame} shows one frame;
+the full video is available at
+\url{https://drive.google.com/file/d/1i85gaqTzuXiqpCSvA3wFZmRBnSUAeHzE/view}.
+
+Segment timing follows the music. A beat-analysis module decodes
+the collection's track, builds a spectral-flux onset envelope,
+estimates the tempo by autocorrelation with a gentle prior centered
+at 120 BPM against half-time readings, and aligns a beat grid to
+the strongest attacks, refined by snapping each beat to the nearest
+onset in a fine time-domain envelope. Each photo then receives a
+whole number of beats close to 2.6 seconds, and the fade out of one
+photo and the fade in of the next meet exactly on a beat, so the
+picture changes on the beat. When no reliable grid exists, as with
+near-silent audio, the builder keeps the fixed 2.6-second timing.
+The analysis uses only NumPy, so it adds no new dependency.
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=\columnwidth]{slideshow_frame.jpg}
+\caption{A frame from a generated slideshow video (mountains
+collection), showing the blurred-fill canvas.}
+\label{fig:frame}
+\end{center}
+\end{figure}
+
+\subsection{Web architecture}
+The service is a Flask application. An upload is stored as a job,
+converted to JPEG at intake (including HEIC, the default iPhone
+format), and processed by a background thread while the browser polls
+a status endpoint; a results page then presents each collection's
+cover, statistics, chosen track with an audio player, and its video.
+The service accepts uploads of 8 to 240 photos, and it offers a
+built-in example run over the same 240 seed photos as the notebook
+run, fetched from Wikimedia Commons when the job starts, for
+visitors who do not wish to upload their own. The hosted service is
+an add-on deployment of the same pipeline; the full 240-image
+assignment run lives in the companion notebook.
+The application is deployed on Render from its public source
+repository; the deployment definition (\texttt{render.yaml}) selects
+a 2 GB instance because the feature-extraction step exceeds the
+memory of smaller tiers.
+
+\section{Implementation and Code Analysis}
+The implementation is five Python modules: \texttt{app.py} (routes,
+job management, and the page templates, 647 non-comment lines),
+\texttt{pipeline.py} (statistics, embeddings, clustering, covers,
+and video, 228 lines), \texttt{music.py} (synthesis and the fallback
+selection rule, 145 lines), \texttt{jamendo.py} (catalog search,
+candidate scoring, and download, 102 lines), and \texttt{beats.py}
+(beat analysis and segment planning, 116 lines). Figure
+\ref{fig:tree} shows the repository layout. Table \ref{tab:cloc}
+summarizes a CLOC count and Table \ref{tab:lizard} a Lizard
+complexity analysis of the five modules and the test suite.
+
+\begin{figure}[htbp]
+\footnotesize
+\begin{verbatim}
+photo-albums-app/
++-- app.py          Flask routes, jobs
++-- pipeline.py     statistics, embeddings,
+                    clustering, covers, video
++-- music.py        synthesized tracks,
+                    fallback selection rule
++-- jamendo.py      catalog search, scoring,
+                    download, attribution
++-- beats.py        beat analysis, segment
+                    timing on the beat grid
++-- data/           example set manifest
+                    (240 seed photos)
++-- requirements.txt
++-- render.yaml     Render deployment
++-- tests/          30 unit tests
++-- docs/           CLOC and Lizard outputs
++-- jobs/           one folder per upload
+                    (created at runtime)
+\end{verbatim}
+\caption{Repository layout of the web service.}
+\label{fig:tree}
+\end{figure}
+
+\begin{table}[htbp]
+\caption{CLOC count (cloc 2.06), application and tests}
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+Language & Files & Blank & Comment & Code \\
+\midrule
+Python & 11 & 252 & 604 & 1030 \\
+\bottomrule
+\end{tabular}
+\label{tab:cloc}
+\end{center}
+\end{table}
+
+\begin{table}[htbp]
+\caption{Lizard analysis of the application modules}
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+File & NLOC & Functions & Avg NLOC & Avg CCN \\
+\midrule
+app.py & 647 & 15 & 7.9 & 2.6 \\
+pipeline.py & 228 & 9 & 24.2 & 5.2 \\
+music.py & 145 & 9 & 11.6 & 2.8 \\
+jamendo.py & 102 & 8 & 11.4 & 4.8 \\
+beats.py & 116 & 8 & 13.8 & 3.9 \\
+\textbf{Total} & \textbf{1238} & \textbf{49} & \textbf{13.1} & \textbf{3.7} \\
+\bottomrule
+\end{tabular}
+\label{tab:lizard}
+\end{center}
+\end{table}
+
+Lizard raises one warning: the orchestration function
+\texttt{run\_pipeline} has a cyclomatic complexity of 22 against a
+threshold of 15, at 87 non-comment lines. Its complexity is the
+accumulated branching of the stages it sequences, now including the
+catalog attempt and the synthesized fallback in the music stage and
+the beat analysis in the video stage, rather than nested logic;
+extracting the per-collection cover and video stages into a helper
+is the first refactoring candidate and is recorded in the project's
+analysis notes. Most of \texttt{app.py}'s line count is its embedded
+page templates.
+
+\section{Evaluation}
+Thirty unit tests cover the music profiles and synthesis, the
+determinism and ordering of the selection rule, the visual statistics
+(solid-color and checkerboard fixtures), recovery of a known cluster
+count from synthetic embeddings, montage geometry, the Flask routes,
+including rejection of uploads with too few photos, the catalog
+module: the target-to-query mapping, candidate scoring and its
+tie-breaks, and the fallbacks when no API key is configured, the API
+fails, or a download is too small to be a real track, and the beat
+module: tempo and phase recovery on synthetic click tracks and a
+kick-and-hat loop at known tempos, no grid for silence, and the
+segment planner's on-grid invariants. All thirty pass in about
+nine seconds.
+
+The full assignment run, executed in the notebook, processed the
+fixed dataset of 240 photographs, 30 each from eight seed topics
+(mountains, beach, city, forest, desert, snow, dogs, and flowers),
+all from Wikimedia Commons with creator and license recorded in the
+dataset manifest. The silhouette score peaked at $k = 8$ (0.150,
+against 0.144 at $k = 7$ and 0.143 at $k = 9$); agglomerative
+clustering at the same $k$ scored 0.147. Against the seed topics,
+the eight collections scored a purity of 0.821 and a normalized
+mutual information of 0.739. Five of the eight collections were at
+least 90 percent dominated by a single topic; the mixing
+concentrated in the forest, mountains, and snow collections, whose
+topics share texture and palette. Slideshow videos were built for
+the three largest collections.
+
+In an end-to-end run of the deployed code path with the synthesized
+library, 24 photos spanning four source topics (mountains, beach,
+city, forest) were uploaded through the web interface. The system
+chose $k = 4$ (silhouette 0.159, against 0.112 at $k = 3$ and
+0.098 at $k = 2$), produced collections of 7, 5, 6, and 6 photos,
+selected the warm track for two collections and the calm track for
+two, and rendered four slideshow videos, each verified as H.264
+video with AAC audio. The full job completed in about one hundred
+seconds on one CPU, including the one-time download of the ResNet-50
+weights.
+
+The same 24 photos were then run with the catalog source enabled.
+All four collections received real Creative Commons tracks:
+\textit{plaid shirt (revisited)} by Ton, \textit{Life is good} by
+Galdson, \textit{Breathe} by Axl \& Arth, and \textit{Energy} by
+Pokki DJ, each downloaded and mixed into its slideshow, with the
+videos again verified as H.264 with AAC audio. The contrast with the
+synthesized library is the audible one: four collections that
+previously shared two synthesized tracks now carry four distinct
+recorded songs, each traceable to the target profile that selected
+it.
+
+Beat timing was verified in a further run of the same 24 photos.
+The analyzer measured all four chosen tracks, at 104.8, 143.8,
+124.6, and 128.3 BPM; the synthesized track in that run carries a
+melody on eighth notes, so its grid is the eighth-note grid at
+twice the notated tempo, and transitions still land on note onsets.
+Each slideshow's measured duration matched its planned beat total
+within about a tenth of a second, and the per-collection timing, tempo,
+grid offset, and segment durations, is recorded in the run's result
+data.
+
+\subsection{Walkthrough of the hosted service}
+Figures \ref{fig:wt-home} to \ref{fig:wt-results} walk through one
+live run of the hosted service with the same 24 photos. The upload
+page (Fig. \ref{fig:wt-home}) takes the photos, and one action starts
+the job. The status page (Fig. \ref{fig:wt-working}) reports each
+stage as it completes, here caught while the music stage is running.
+The results page (Fig. \ref{fig:wt-results}) presents every
+collection with its cover sheet, its visual statistics, its matched
+track together with the search the rule ran, and its slideshow
+video. In this run three collections received Jamendo tracks and one
+fell back to the synthesized library, so the walkthrough shows both
+music paths exactly as a visitor sees them.
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=\columnwidth]{walkthrough_home.jpg}
+\caption{The upload page of the hosted service.}
+\label{fig:wt-home}
+\end{center}
+\end{figure}
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=\columnwidth]{walkthrough_working.jpg}
+\caption{The status page during a run, with the music stage in
+progress and the video stage still pending.}
+\label{fig:wt-working}
+\end{center}
+\end{figure}
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=\columnwidth]{walkthrough_results.jpg}
+\caption{The top of the results page: run summary and the first
+collection's cover sheet and statistics.}
+\label{fig:wt-results}
+\end{center}
+\end{figure}
+
+\section{Limitations}
+K-Means favors round, similarly sized clusters, so a collection with
+one dominant subject and many outliers can be split awkwardly. The
+silhouette range must shrink for small uploads, and below eight
+photos the service declines to run. Catalog metadata is uneven:
+many tracks lack a speed rating, and tag vocabularies vary by
+uploader, so the match is only as precise as the catalog's own
+descriptions; the synthesized fallback tracks are deliberately
+simple, and in both sources the contribution is the selection rule,
+not composition quality. Processing is CPU-bound, so large uploads take
+minutes, and job results are stored on the service's local disk and
+are not persisted across redeploys.
+
+\section{Conclusion}
+A course pipeline for grouping photos and scoring music by rule
+carries over cleanly to a public web service. The pieces that made
+the original system defensible, measured statistics, a documented
+selection rule, and stored scores, are the same pieces that make the
+hosted version explainable to its users: every album can say why its
+photos are together and why its music was chosen.
+
+\section*{Artifact Availability}
+All of the artifacts are collected here. The executed Jupyter
+notebook with the full 240-image run opens in Google Colab at
+\url{https://colab.research.google.com/github/jamelski1/seng691-hw5/blob/main/seng691-hw5.ipynb};
+its source repository, including the dataset manifest, is
+\url{https://github.com/jamelski1/seng691-hw5}. A generated slideshow
+video is on Google Drive at
+\url{https://drive.google.com/file/d/1i85gaqTzuXiqpCSvA3wFZmRBnSUAeHzE/view}.
+The web service source is at
+\url{https://github.com/jamelski1/photo-albums-app}, and the running
+service is at \url{https://photo-albums-y7ir.onrender.com}.
+
+\begin{thebibliography}{00}
+\bibitem{he2016} K. He, X. Zhang, S. Ren, and J. Sun, ``Deep residual
+learning for image recognition,'' in \textit{Proc. IEEE Conf. Comput.
+Vis. Pattern Recognit.}, 2016, pp. 770--778.
+\bibitem{deng2009} J. Deng, W. Dong, R. Socher, L.-J. Li, K. Li, and
+L. Fei-Fei, ``ImageNet: A large-scale hierarchical image database,''
+in \textit{Proc. IEEE Conf. Comput. Vis. Pattern Recognit.}, 2009,
+pp. 248--255.
+\bibitem{rousseeuw1987} P. J. Rousseeuw, ``Silhouettes: A graphical
+aid to the interpretation and validation of cluster analysis,''
+\textit{J. Comput. Appl. Math.}, vol. 20, pp. 53--65, 1987.
+\bibitem{poole2017} D. L. Poole and A. K. Mackworth,
+\textit{Artificial Intelligence: Foundations of Computational
+Agents}, 2nd ed. Cambridge, U.K.: Cambridge University Press, 2017.
+\end{thebibliography}
+
+\end{document}
