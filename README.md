@@ -60,6 +60,11 @@ On a smaller plan the feature step runs out of memory.
   progress, a staged progress page, and the results page with covers,
   statistics, music attribution and videos) are inline templates in this
   file, so there is no templates directory and no front-end build.
+- `static/backdrop/` — five photographs that drift and crossfade behind
+  the home and progress pages: Ansel Adams' National Park Service series
+  (1933 to 1942) from the U.S. National Archives, public domain, via
+  Wikimedia Commons. The source page of each one is linked in the page
+  footer and listed in `BACKDROP` in `app.py`.
 - `pipeline.py` — statistics, embeddings, clustering, covers, videos.
 - `music.py` — procedural track synthesis and the selection rule, carried
   over from the assignment system.

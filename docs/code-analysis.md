@@ -35,9 +35,10 @@ is the first refactoring candidate.
 
 ## Tests
 
-29 unit tests, all passing (pytest 9.0.3, about 7 seconds). Coverage by
+32 unit tests, all passing (pytest 9.0.3, about 7 seconds). Coverage by
 area: music synthesis and the selection rule (6), visual statistics,
-k selection, and montage geometry (6), the Flask routes (10: the home,
+k selection, and montage geometry (6), the Flask routes (13: the home,
 job, results and error pages, upload validation as a page and as JSON,
-and the redirect from results to the job page), and the Jamendo query
-mapping, candidate scoring, and fallbacks (7).
+the redirect from results to the job page, and the backdrop with its
+credits and files), and the Jamendo query mapping, candidate scoring,
+and fallbacks (7).

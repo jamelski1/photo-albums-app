@@ -111,3 +111,30 @@ def test_results_redirects_to_job_page_until_finished(client, tmp_path, monkeypa
     monkeypatch.setattr(app_module, "JOBS", tmp_path)
     resp = client.get("/results/pending")
     assert resp.status_code == 302 and resp.headers["Location"].endswith("/job/pending")
+
+
+def test_home_and_job_pages_carry_the_backdrop_with_credit(client):
+    home = client.get("/").data.decode()
+    assert 'class="backdrop"' in home
+    assert "/static/backdrop/tetons.jpg" in home
+    assert "Ansel Adams" in home and "commons.wikimedia.org" in home
+    app_module.JOBS_STATE["bd"] = {"state": "working", "step": "Starting"}
+    try:
+        assert 'class="backdrop"' in client.get("/job/bd").data.decode()
+    finally:
+        del app_module.JOBS_STATE["bd"]
+
+
+def test_backdrop_files_exist_for_every_credit():
+    for photo in app_module.BACKDROP:
+        assert (app_module.BASE / "static" / "backdrop" / photo["file"]).is_file()
+
+
+def test_results_page_stays_plain(client, tmp_path, monkeypatch):
+    import json
+
+    monkeypatch.setattr(app_module, "JOBS", tmp_path)
+    out = tmp_path / "job2" / "output"
+    out.mkdir(parents=True)
+    out.joinpath("result.json").write_text(json.dumps(_result(False)))
+    assert 'class="backdrop"' not in client.get("/results/job2").data.decode()

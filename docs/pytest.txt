@@ -1,4 +1,4 @@
-.............................                                            [100%]
+................................                                         [100%]
 ============================== warnings summary ===============================
 photo-albums-app/tests/test_pipeline.py::test_visual_stats_white_is_bright_and_unsaturated
 photo-albums-app/tests/test_pipeline.py::test_visual_stats_red_is_warm_and_blue_is_cool
@@ -8,4 +8,4 @@ photo-albums-app/tests/test_pipeline.py::test_visual_stats_checkerboard_has_more
     return fit_method(estimator, *args, **kwargs)
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-29 passed, 4 warnings in 6.80s
+32 passed, 4 warnings in 6.32s
